@@ -12,7 +12,7 @@ label.pack(side=TOP)
 ipInLabel = StringVar()
 input = Entry(gui, textvariable=ipInLabel)
 input.pack()
-ipInLabel.set("Z3PH7R")
+# ipInLabel.set("Z3PH7R")
 
 scanButton = Button(gui, text="Rejoindre une partie", command=sendInput)
 scanButton.config(width=20, height=2)
