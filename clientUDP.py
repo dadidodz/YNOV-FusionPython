@@ -3,7 +3,7 @@
 import socket
 
 # Paramètres du serveur
-SERVER_HOST = '127.0.0.1'  # Adresse IP du serveur
+SERVER_HOST = '10.34.0.248'  # Adresse IP du serveur
 SERVER_PORT = 12345        # Port du serveur
 
 # Message à envoyer
