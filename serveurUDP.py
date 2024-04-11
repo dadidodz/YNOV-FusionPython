@@ -3,7 +3,7 @@
 import socket
 
 # Paramètres du serveur
-HOST = '127.0.0.1'  # Adresse IP du serveur
+HOST = '10.34.0.248'  # Adresse IP du serveur
 PORT = 12345        # Port sur lequel le serveur écoute
 
 # Création d'un socket UDP
