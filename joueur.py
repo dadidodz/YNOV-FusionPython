@@ -1,6 +1,6 @@
 class Joueur:
-    def __init__(self, nom, email, mmr, adresse_ip, mot_de_passe, en_attente):
-        self.nom = nom
+    def __init__(self, pseudo, email, mmr, adresse_ip, mot_de_passe, en_attente):
+        self.pseudo = pseudo
         self.email = email
         self.mmr = mmr
         self.adresse_ip = adresse_ip

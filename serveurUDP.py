@@ -2,6 +2,7 @@
 
 import socket
 import sqlite3
+import json
 
 connection = sqlite3.connect("fusion.sqlite")
 
@@ -23,9 +24,17 @@ print("Serveur UDP en attente de messages...")
 while True:
     # Recevoir les données du client
     data, addr = server_socket.recvfrom(1024)
-    print("Message reçu du client:", data.decode())
+    tab_received = json.loads(data.decode())
+    for tab in tab_received:
+        print("Message reçu du client:", tab)
+    
     if (data):
-        cursor.execute(f"INSERT INTO HistoriqueMessage(Id_Joueur, Id_Partie, Contenu, DateHeureEnvoi) VALUES (1, 1, '{data.decode()}', '2024-04-11 17:29:30')")
+        if tab_received[0] == "connexion":
+            
+            
+        # if data
+
+        # cursor.execute(f"INSERT INTO HistoriqueMessage(Id_Joueur, Id_Partie, Contenu, DateHeureEnvoi) VALUES (1, 1, '{data.decode()}', '2024-04-11 17:29:30')")
         # cursor.execute(f"INSERT INTO HistoriqueMessage(Contenu) VALUES ('{data.decode()}')")
         # print(cursor.execute(f"INSERT INTO HistoriqueMessage(Contenu) VALUES ('{data.decode()}')"))
         connection.commit()
