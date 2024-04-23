@@ -48,7 +48,7 @@ while True:
         # Afficher les données reçues et l'adresse du client
         print(f"Reçu depuis {addr}: {data.decode()}")
 
-
+    server_socket.sendto("Dans reconnexion".encode('utf-8'), addr)
         # cursor.execute(f"INSERT INTO HistoriqueMessage(Id_Joueur, Id_Partie, Contenu, DateHeureEnvoi) VALUES (1, 1, '{data.decode()}', '2024-04-11 17:29:30')")
         # cursor.execute(f"INSERT INTO HistoriqueMessage(Contenu) VALUES ('{data.decode()}')")
         # print(cursor.execute(f"INSERT INTO HistoriqueMessage(Contenu) VALUES ('{data.decode()}')"))
