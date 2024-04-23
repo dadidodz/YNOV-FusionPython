@@ -1,5 +1,6 @@
 import tkinter as tk
-from clientUDP import send_message, connexion
+from clientUDP import send_message, connexion, envoi_mes
+import time
 
 def afficher_page_suivante():
     # Cette fonction masque le contenu actuel et affiche la page suivante
@@ -14,9 +15,19 @@ def send_pseudo():
     pseudo = message.get()
     connexion(pseudo)
 
+# def envoi():
+#     envoi_mes()
+
+
 def quitter():
     
     gui.quit()
+
+def planifier_envoi_mes():
+    # Planifie l'envoi du message au serveur toutes les 10 secondes
+    envoi_mes()
+    # Attendre 10 secondes avant d'envoyer le prochain message
+    gui.after(10000, planifier_envoi_mes)
 
 gui = tk.Tk()
 gui.geometry("330x330")
@@ -46,6 +57,8 @@ scan_button2 = tk.Button(cadre_actuel, text="Quitter", command=quitter)
 scan_button2.config(width=20, height=2)
 scan_button2.pack()
 
+
+#-----------PAGE 2--------------
 # Création du deuxième cadre (page)
 cadre_suivant = tk.Frame(gui)
 # Contenu du deuxième cadre (page)
@@ -58,8 +71,22 @@ bouton_retour.pack()
 bouton_suivant = tk.Button(cadre_actuel, text="Page suivante", command=afficher_page_suivante)
 bouton_suivant.pack()
 
-# Lancement de la boucle principale
+
+
+# while True:
+
+
+planifier_envoi_mes()
+
 gui.mainloop()
+# envoi_mes()
+#Attendre 10 secondes avant d'envoyer le prochain message
+
+
+
+
+# Lancement de la boucle principale
+
 
 
 

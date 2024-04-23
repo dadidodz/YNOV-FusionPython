@@ -45,7 +45,11 @@ while True:
                 cursor.execute(f"INSERT INTO Joueur(Pseudo, IP, MMR, Mot_de_passe, EnAttente) VALUES ('{tab_received[1]}', '{addr[0]}', 1000, NULL, 1)")
                 connection.commit()
                 server_socket.sendto("Joueur ajouté à la base de donnée".encode('utf-8'), addr)
-                
+        
+        if tab_received[0] == "reconnexion":
+            # Répondre au client
+            server_socket.sendto("Dans reconnexion".encode('utf-8'), addr)
+        
         # Afficher les données reçues et l'adresse du client
         print(f"Reçu depuis {addr}: {data.decode()}")
 
@@ -55,6 +59,5 @@ while True:
         # print(cursor.execute(f"INSERT INTO HistoriqueMessage(Contenu) VALUES ('{data.decode()}')"))
         # connection.commit()
 
-    # Répondre au client
-    server_socket.sendto("Message reçu par le serveur.".encode('utf-8'), addr)
+    
 
