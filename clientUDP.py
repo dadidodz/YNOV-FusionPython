@@ -25,3 +25,16 @@ def connexion(pseudo):
     response, _ = client_socket.recvfrom(1024)
     print("Réponse du serveur:", response.decode())
     client_socket.close()
+
+def deconnexion(pseudo):
+
+    #Création d'un tableau avec un booléen True et le pseudo
+    #que le joueur a renseigné
+    tab = ["deconnexion", pseudo]
+    tab_json = json.dumps(tab)
+
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    client_socket.sendto(tab_json.encode(), (SERVER_HOST, SERVER_PORT))
+    response, _ = client_socket.recvfrom(1024)
+    print("Réponse du serveur:", response.decode())
+    client_socket.close()

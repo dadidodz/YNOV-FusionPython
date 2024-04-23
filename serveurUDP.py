@@ -46,8 +46,9 @@ while True:
                 connection.commit()
                 server_socket.sendto("Joueur ajouté à la base de donnée".encode('utf-8'), addr)
                 
-            
-        # if data
+        # Afficher les données reçues et l'adresse du client
+        print(f"Reçu depuis {addr}: {data.decode()}")
+
 
         # cursor.execute(f"INSERT INTO HistoriqueMessage(Id_Joueur, Id_Partie, Contenu, DateHeureEnvoi) VALUES (1, 1, '{data.decode()}', '2024-04-11 17:29:30')")
         # cursor.execute(f"INSERT INTO HistoriqueMessage(Contenu) VALUES ('{data.decode()}')")
