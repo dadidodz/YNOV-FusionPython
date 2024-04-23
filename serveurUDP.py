@@ -8,7 +8,7 @@ connection = sqlite3.connect("fusion.sqlite")
 
 cursor = connection.cursor()
 
-
+# Serveur()
 # Paramètres du serveur
 HOST = '10.34.0.248'  # Adresse IP du serveur
 PORT = 12345        # Port sur lequel le serveur écoute
@@ -26,10 +26,6 @@ while True:
     data, addr = server_socket.recvfrom(1024)
     tab_received = json.loads(data.decode())
 
-    
-    print(type(addr), addr)
-
-
     for tab in tab_received:
         print("Message reçu du client:", tab)
     
@@ -41,7 +37,6 @@ while True:
                 pass
                 # cursor.execute(f"SELECT COUNT(*) FROM joueur WHERE pseudo = '{tab_received[1]}'")
             else:
-                
                 cursor.execute(f"INSERT INTO Joueur(Pseudo, IP, MMR, Mot_de_passe, EnAttente) VALUES ('{tab_received[1]}', '{addr[0]}', 1000, NULL, 1)")
                 connection.commit()
                 server_socket.sendto("Joueur ajouté à la base de donnée".encode('utf-8'), addr)
