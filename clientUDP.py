@@ -1,6 +1,6 @@
 import socket
 
-def hostScan(pseudo):
+def send_message(pseudo):
     SERVER_HOST = '10.34.0.248'
     SERVER_PORT = 12345   
     message = f"Pseudo: {pseudo}"
@@ -9,3 +9,4 @@ def hostScan(pseudo):
     response, _ = client_socket.recvfrom(1024)
     print("Réponse du serveur:", response.decode())
     client_socket.close()
+
