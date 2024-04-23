@@ -12,8 +12,11 @@ def afficher_page_suivante():
 #     send_message(pseudo)
 
 def send_pseudo():
-    pseudo = message.get()
-    connexion(pseudo)
+    # print(message.get())
+    if len(message.get()) > 2:
+        print("Dans if send_pseudo")
+        pseudo = message.get()
+        connexion(pseudo)
 
 def actions_combinees():
     send_pseudo()
