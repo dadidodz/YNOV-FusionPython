@@ -1,4 +1,4 @@
-# coding: utf-8
+# PAS UTILISER CE SERVEUR
 
 import socket
 import sqlite3
@@ -20,18 +20,14 @@ server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # Lier le socket au port et à l'adresse IP
 server_socket.bind((HOST, PORT))
 
-# print("Serveur UDP en attente de messages...")
+print("Serveur UDP en attente de messages...")
 
-# def check_connexion():
+# def check_connexion(addr):
 #     print("ici")
-#     cursor.execute(f"SELECT DISTINCT IP FROM joueur")
-#     ips = cursor.fetchone()[0]
-#     for ip in ips:
-#         ip_tuple = (ip, PORT)
-#         server_socket.sendto("Dans reconnexion".encode('utf-8'), ip_tuple)
-#         response, _ = server_socket.recvfrom(1024)
-#         if response == None:
-#             print(f"Le joueur n'est plus connecté")
+#     server_socket.sendto("es tu toujours connectée".encode('utf-8'), ip_tuple)
+#     response, _ = server_socket.recvfrom(1024)
+#     if response == None:
+#         print(f"Le joueur n'est plus connecté")
 
 #     threading.Timer(10, check_connexion).start()
 
@@ -40,7 +36,7 @@ while True:
     data, addr = server_socket.recvfrom(1024)
     tab_received = json.loads(data.decode())
 
-    # check_connexion()
+    # check_connexion(addr)
 
     for tab in tab_received:
         print("Message reçu du client:", tab)
@@ -65,7 +61,7 @@ while True:
         # Afficher les données reçues et l'adresse du client
         print(f"Reçu depuis {addr}: {data.decode()}")
 
-    server_socket.sendto("Dans reconnexion".encode('utf-8'), addr)
+    # server_socket.sendto("Dans reconnexion".encode('utf-8'), addr)
         # cursor.execute(f"INSERT INTO HistoriqueMessage(Id_Joueur, Id_Partie, Contenu, DateHeureEnvoi) VALUES (1, 1, '{data.decode()}', '2024-04-11 17:29:30')")
         # cursor.execute(f"INSERT INTO HistoriqueMessage(Contenu) VALUES ('{data.decode()}')")
         # print(cursor.execute(f"INSERT INTO HistoriqueMessage(Contenu) VALUES ('{data.decode()}')"))

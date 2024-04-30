@@ -1,3 +1,4 @@
+# PAS UTILISER CE CLIENT
 import socket
 import json
 import time
@@ -13,7 +14,7 @@ def send_message(message):
     
     client_socket.sendto(message.encode(), (SERVER_HOST, SERVER_PORT))
     response, _ = client_socket.recvfrom(1024)
-    print("Réponse du serveur:", response.decode())
+    print("1Réponse du serveur:", response.decode())
     client_socket.close()
 
 def connexion(pseudo):
@@ -25,8 +26,8 @@ def connexion(pseudo):
 
     client_socket.sendto(tab_json.encode(), (SERVER_HOST, SERVER_PORT))
     response, _ = client_socket.recvfrom(1024)
-    print("Réponse du serveur:", response.decode())
-    client_socket.close()
+    print("2Réponse du serveur:", response.decode())
+    # client_socket.close()
     return response.decode()
 
 def deconnexion(pseudo):
@@ -38,7 +39,7 @@ def deconnexion(pseudo):
 
     client_socket.sendto(tab_json.encode(), (SERVER_HOST, SERVER_PORT))
     response, _ = client_socket.recvfrom(1024)
-    print("Réponse du serveur:", response.decode())
+    print("3Réponse du serveur:", response.decode())
     client_socket.close()
 
 def envoi_mes():
@@ -47,8 +48,11 @@ def envoi_mes():
 
     client_socket.sendto(tab_json.encode(), (SERVER_HOST, SERVER_PORT))
     response, _ = client_socket.recvfrom(1024)
-    print("Réponse du serveur:", response.decode())
+    print("4Réponse du serveur:", response.decode())
     client_socket.close()
+
+
+
 
 
     

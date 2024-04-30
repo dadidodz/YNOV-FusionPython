@@ -1,3 +1,4 @@
+# PAS UTILISER CET APP
 import tkinter as tk
 from clientUDP import send_message, connexion, envoi_mes
 import time
@@ -20,7 +21,7 @@ def send_pseudo():
     if len(message.get()) > 2:
         # print("Dans if send_pseudo")
         pseudo = message.get()
-        if connexion(pseudo) == "Joueur connecté":
+        if connexion(pseudo):
             afficher_page_suivante()
 
 def actions_combinees():
@@ -61,7 +62,7 @@ message = tk.StringVar()
 input = tk.Entry(page1, textvariable=message)
 input.pack()
 
-scan_button1 = tk.Button(page1, text="Connexion", command=lambda:[send_pseudo()])
+scan_button1 = tk.Button(page1, text="Connexion", command=lambda:[send_pseudo(), planifier_envoi_mes(), afficher_page_suivante()])
 scan_button1.config(width=20, height=2)
 scan_button1.pack()
 
