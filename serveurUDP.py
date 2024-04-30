@@ -3,6 +3,7 @@
 import socket
 import sqlite3
 import json
+import threading
 
 connection = sqlite3.connect("fusion.sqlite")
 
@@ -19,12 +20,27 @@ server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # Lier le socket au port et à l'adresse IP
 server_socket.bind((HOST, PORT))
 
-print("Serveur UDP en attente de messages...")
+# print("Serveur UDP en attente de messages...")
+
+# def check_connexion():
+#     print("ici")
+#     cursor.execute(f"SELECT DISTINCT IP FROM joueur")
+#     ips = cursor.fetchone()[0]
+#     for ip in ips:
+#         ip_tuple = (ip, PORT)
+#         server_socket.sendto("Dans reconnexion".encode('utf-8'), ip_tuple)
+#         response, _ = server_socket.recvfrom(1024)
+#         if response == None:
+#             print(f"Le joueur n'est plus connecté")
+
+#     threading.Timer(10, check_connexion).start()
 
 while True:
     # Recevoir les données du client
     data, addr = server_socket.recvfrom(1024)
     tab_received = json.loads(data.decode())
+
+    # check_connexion()
 
     for tab in tab_received:
         print("Message reçu du client:", tab)
@@ -32,9 +48,10 @@ while True:
     if (data):
         if tab_received[0] == "connexion":
             cursor.execute(f"SELECT COUNT(*) FROM joueur WHERE pseudo = '{tab_received[1]}'")
-            resultat = cursor.fetchone()[0]
-            if resultat:
-                pass
+            pseudos = cursor.fetchone()[0]
+            if pseudos:
+                # print(addr)
+                server_socket.sendto("Joueur connecté".encode('utf-8'), addr)
                 # cursor.execute(f"SELECT COUNT(*) FROM joueur WHERE pseudo = '{tab_received[1]}'")
             else:
                 cursor.execute(f"INSERT INTO Joueur(Pseudo, IP, MMR, Mot_de_passe, EnAttente) VALUES ('{tab_received[1]}', '{addr[0]}', 1000, NULL, 1)")
