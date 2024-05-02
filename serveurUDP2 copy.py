@@ -2,6 +2,7 @@ import socket
 import threading
 import time
 import json
+from chat import Chat
 
 class UDPServer:
     def __init__(self, host, port):
@@ -10,6 +11,7 @@ class UDPServer:
         self.clients = {}
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.server_socket.bind((self.SERVER_HOST, self.SERVER_PORT))
+        self.chat = Chat()
         print(f"Serveur UDP en écoute sur {self.SERVER_HOST}:{self.SERVER_PORT}")
 
     def receive_messages(self):
@@ -26,6 +28,22 @@ class UDPServer:
 
                     if message_received[0] == "connexion":
                         self.server_socket.sendto(f"Pseudo : {message_received[1]}, vous êtes connecté.".encode('utf-8'), client_address)
+                    
+                    if message_received[0] == "chat":
+                        print(f"Dans chat {client_address}: {message_received[1]}")
+                        self.chat.add_message(message_received[1])
+                        # self.server_socket.sendto(f"{message_received[1]}".encode('utf-8'), client_address)
+
+                    if message_received[0] == "upd_chat":
+                        if self.chat.last_updated > message_received[1]:
+                            messages = self.chat.get_messages_after_time(message_received[1])
+                            reponse = ["new_msg", messages]
+                            reponse_json = json.dumps(reponse)
+                            self.server_socket.sendto(reponse_json.encode(), client_address)
+                        else:
+                            reponse = ["ras"]
+                            reponse_json = json.dumps(reponse)
+                            self.server_socket.sendto(reponse_json.encode(), client_address)
 
                     if message_received[0] == "deconnexion":
                         del self.clients[client_address]
@@ -59,5 +77,6 @@ class UDPServer:
 
 # Utilisation du serveur
 if __name__ == "__main__":
-    server = UDPServer('10.34.0.248', 12345)
+    # server = UDPServer('10.34.0.248', 12345)
+    server = UDPServer('192.168.1.45', 12345)
     server.start_server()
