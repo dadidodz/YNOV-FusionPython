@@ -2,6 +2,7 @@
 import socket
 import threading
 import time
+import json
 
 # Paramètres du serveur
 SERVER_HOST = '10.34.0.248' # Adresse IP du serveur (0.0.0.0 signifie toutes les interfaces)
@@ -15,9 +16,22 @@ def receive_messages(server_socket):
     while True:
         try:
             data, client_address = server_socket.recvfrom(1024)
-            # Mettre à jour le timestamp du client
-            clients[client_address] = time.time()
-            print(f"Message reçu de {client_address}: {data.decode()}")
+            message_received = json.loads(data.decode())
+            if data :
+                if message_received[0] == "alive":
+                    # Mettre à jour le timestamp du client
+                    clients[client_address] = time.time()
+                    server_socket.sendto("Vous êtes toujours connecté".encode('utf-8'), client_address)
+                    print(f"Message reçu de {client_address}: {data.decode()}") 
+                
+                if message_received[0] == "connexion":
+                    server_socket.sendto(f"Pseudo : {message_received[1]}, vous êtes connecté.".encode('utf-8'), client_address)
+                
+                if message_received[0] == "deconnexion":
+                    del clients[client_address]
+                    server_socket.sendto(f"Pseudo : {message_received[1]}, vous êtes déconnecté.".encode('utf-8'), client_address)
+                    print(f"Client {client_address} supprimé pour déconnexion.")
+
         except Exception as e:
             print(f"Erreur lors de la réception du message : {e}")
 
