@@ -1,71 +1,69 @@
-# PAS UTILISER CE SERVEUR
-
+# UTILISER CE SERVEUR
 import socket
-import sqlite3
-import json
 import threading
+import time
+import json
 
-connection = sqlite3.connect("fusion.sqlite")
-
-cursor = connection.cursor()
-
-# Serveur()
 # Paramètres du serveur
-HOST = '10.34.0.248'  # Adresse IP du serveur
-PORT = 12345        # Port sur lequel le serveur écoute
+SERVER_HOST = '10.34.0.248' # Adresse IP du serveur (0.0.0.0 signifie toutes les interfaces)
+SERVER_PORT = 12345        # Port sur lequel le serveur écoute
 
-# Création d'un socket UDP
+# Dictionnaire pour stocker les adresses IP des clients connectés
+clients = {}
+
+# Fonction pour recevoir les messages des clients
+def receive_messages(server_socket):
+    while True:
+        try:
+            data, client_address = server_socket.recvfrom(1024)
+            message_received = json.loads(data.decode())
+            if data :
+                if message_received[0] == "alive":
+                    # Mettre à jour le timestamp du client
+                    clients[client_address] = time.time()
+                    server_socket.sendto("Vous êtes toujours connecté".encode('utf-8'), client_address)
+                    print(f"Message reçu de {client_address}: {data.decode()}") 
+                
+                if message_received[0] == "connexion":
+                    server_socket.sendto(f"Pseudo : {message_received[1]}, vous êtes connecté.".encode('utf-8'), client_address)
+                
+                if message_received[0] == "chat":
+                    server_socket.sendto(f"Pseudo : {message_received[1]}, vous êtes connecté.".encode('utf-8'), client_address)
+                
+                if message_received[0] == "deconnexion":
+                    del clients[client_address]
+                    server_socket.sendto(f"Pseudo : {message_received[1]}, vous êtes déconnecté.".encode('utf-8'), client_address)
+                    print(f"Client {client_address} supprimé pour déconnexion.")
+
+        except Exception as e:
+            print(f"Erreur lors de la réception du message : {e}")
+
+# Fonction pour supprimer les clients inactifs
+def remove_inactive_clients():
+    while True:
+        try:
+            # Supprimer les clients qui n'ont pas envoyé de message depuis plus de 30 secondes
+            current_time = time.time()
+            inactive_clients = [address for address, timestamp in clients.items() if current_time - timestamp > 30]
+            for address in inactive_clients:
+                del clients[address]
+                print(f"Client {address} supprimé pour inactivité.")
+            time.sleep(30)
+        except Exception as e:
+            print(f"Erreur lors de la suppression des clients inactifs : {e}")
+
+# Création d'un socket UDP pour le serveur
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+server_socket.bind((SERVER_HOST, SERVER_PORT))
 
-# Lier le socket au port et à l'adresse IP
-server_socket.bind((HOST, PORT))
+print(f"Serveur UDP en écoute sur {SERVER_HOST}:{SERVER_PORT}")
 
-print("Serveur UDP en attente de messages...")
+# Démarrer un thread pour recevoir les messages des clients
+threading.Thread(target=receive_messages, args=(server_socket,)).start()
 
-# def check_connexion(addr):
-#     print("ici")
-#     server_socket.sendto("es tu toujours connectée".encode('utf-8'), ip_tuple)
-#     response, _ = server_socket.recvfrom(1024)
-#     if response == None:
-#         print(f"Le joueur n'est plus connecté")
+# Démarrer un thread pour supprimer les clients inactifs
+threading.Thread(target=remove_inactive_clients).start()
 
-#     threading.Timer(10, check_connexion).start()
-
+# Garder le programme en cours d'exécution
 while True:
-    # Recevoir les données du client
-    data, addr = server_socket.recvfrom(1024)
-    tab_received = json.loads(data.decode())
-
-    # check_connexion(addr)
-
-    for tab in tab_received:
-        print("Message reçu du client:", tab)
-    
-    if (data):
-        if tab_received[0] == "connexion":
-            cursor.execute(f"SELECT COUNT(*) FROM joueur WHERE pseudo = '{tab_received[1]}'")
-            pseudos = cursor.fetchone()[0]
-            if pseudos:
-                # print(addr)
-                server_socket.sendto("Joueur connecté".encode('utf-8'), addr)
-                # cursor.execute(f"SELECT COUNT(*) FROM joueur WHERE pseudo = '{tab_received[1]}'")
-            else:
-                cursor.execute(f"INSERT INTO Joueur(Pseudo, IP, MMR, Mot_de_passe, EnAttente) VALUES ('{tab_received[1]}', '{addr[0]}', 1000, NULL, 1)")
-                connection.commit()
-                server_socket.sendto("Joueur ajouté à la base de donnée".encode('utf-8'), addr)
-        
-        if tab_received[0] == "reconnexion":
-            # Répondre au client
-            server_socket.sendto("Dans reconnexion".encode('utf-8'), addr)
-        
-        # Afficher les données reçues et l'adresse du client
-        print(f"Reçu depuis {addr}: {data.decode()}")
-
-    # server_socket.sendto("Dans reconnexion".encode('utf-8'), addr)
-        # cursor.execute(f"INSERT INTO HistoriqueMessage(Id_Joueur, Id_Partie, Contenu, DateHeureEnvoi) VALUES (1, 1, '{data.decode()}', '2024-04-11 17:29:30')")
-        # cursor.execute(f"INSERT INTO HistoriqueMessage(Contenu) VALUES ('{data.decode()}')")
-        # print(cursor.execute(f"INSERT INTO HistoriqueMessage(Contenu) VALUES ('{data.decode()}')"))
-        # connection.commit()
-
-    
-
+    time.sleep(1)
