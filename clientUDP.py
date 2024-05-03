@@ -6,11 +6,10 @@ import json
 import time
 
 # SERVER_IP = '10.34.0.248'  # Adresse IP du serveur
-SERVER_IP = '192.168.1.45'
-SERVER_PORT = 12345        # Port sur lequel le serveur écoute
+# Port sur lequel le serveur écoute
 
 class UDPClient:
-    def __init__(self, server_ip, server_port):
+    def __init__(self, server_ip=None, server_port=None):
         self.server_ip = server_ip
         self.server_port = server_port
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -18,21 +17,36 @@ class UDPClient:
         self.keep_alive_id = None
         self.last_update_msg = time.time()
     
-    def connexion(self):
+    def read_server_info_from_file(self, filename='config.txt'):
         try:
-            message = ["connexion", self.pseudo.get()]
-            message_json = json.dumps(message)
-
-            self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
-            response, _ = self.client_socket.recvfrom(1024)
-            print("Dans connexion, réponse du serveur :", response.decode())
-            # client_socket.close()
-            if response.decode():
-                self.next_page()
-                self.update_chat()
-
+            with open(filename, 'r') as file:
+                lines = file.readlines()
+                for line in lines:
+                    if "Adresse IP du serveur" in line:
+                        self.server_ip = line.split(":")[-1].strip()
+                    elif "Port du serveur" in line:
+                        self.server_port = int(line.split(":")[-1].strip())
         except Exception as e:
-            print(f"Erreur lors de la connexion au serveur : {e}")
+            print(f"Erreur lors de la lecture du fichier de configuration : {e}")
+    
+    def connexion(self):
+        if len(self.pseudo.get()) > 2:
+            try:
+                message = ["connexion", self.pseudo.get()]
+                message_json = json.dumps(message)
+
+                self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
+                response, _ = self.client_socket.recvfrom(1024)
+                print("Dans connexion, réponse du serveur :", response.decode())
+                if response:
+                    self.next_page()
+                    self.stay_connected()
+                    self.update_chat()
+
+            except Exception as e:
+                print(f"Erreur lors de la connexion au serveur : {e}")
+        else:
+            self.input.delete(0, 'end')
     
     def stay_connected(self):
         try:
@@ -62,7 +76,7 @@ class UDPClient:
     
     def send_msg(self):
         try:
-            message = ["chat", self.message2.get()]
+            message = ["chat", self.pseudo.get(), self.message2.get()]
             message_json = json.dumps(message)
 
             self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
@@ -84,8 +98,10 @@ class UDPClient:
                 if message_received[0] == "new_msg":
                     for msg in message_received[1]:
                         self.chat_display.configure(state=tk.NORMAL)
-                        self.chat_display.insert(tk.END, f"You: {msg}\n")
+                        # self.chat_display.insert(tk.END, f"{self.pseudo.get()} (You): {msg}\n")
+                        self.chat_display.insert(tk.END, f"{msg}\n")
                         self.chat_display.configure(state=tk.DISABLED)
+                        self.chat_display.see(tk.END)  # Faire défiler vers le bas
                         self.last_update_msg = time.time()
                 
                 if message_received[0] == "ras":
@@ -117,7 +133,22 @@ class UDPClient:
         self.previous_page()
         # self.client_socket.close()
     
+    def on_validate(self, P):
+        # Limiter à 10 caractères
+        return len(P) <= 10
+
+    def on_entry_click(self, event):
+        if self.input.get() == self.placeholder:
+            self.input.delete(0, "end")
+            self.input.config(fg="black")
+
+    def on_focus_out(self, event):
+        if not self.input.get():
+            self.input.insert(0, self.placeholder)
+            self.input.config(fg="grey")
+    
     def run(self):
+        self.read_server_info_from_file()
         self.root = tk.Tk()
         self.root.geometry("600x600")
         self.root.title("Client UDP")
@@ -137,10 +168,16 @@ class UDPClient:
         self.label_2.pack()
 
         self.pseudo = tk.StringVar()
-        self.input = tk.Entry(self.page1, textvariable=self.pseudo)
+
+        self.placeholder = "Entrez votre pseudo ici"
+        self.input = tk.Entry(self.page1, textvariable=self.pseudo, fg="grey")
+
+        self.input.insert(0, self.placeholder)
+        self.input.bind("<FocusIn>", self.on_entry_click)
+        self.input.bind("<FocusOut>", self.on_focus_out)
         self.input.pack()
 
-        self.scan_button1 = tk.Button(self.page1, text="Connexion", command=lambda:[self.stay_connected(), self.connexion()])
+        self.scan_button1 = tk.Button(self.page1, text="Connexion", command=lambda:[self.connexion()])
         self.scan_button1.config(width=20, height=2)
         self.scan_button1.pack()
 
@@ -161,18 +198,18 @@ class UDPClient:
         self.chat_display.pack()
 
         self.message2 = tk.StringVar()
-        self.input2 = tk.Entry(self.page2, textvariable=self.message2)
+        self.validate_cmd = self.page2.register(self.on_validate)
+        self.input2 = tk.Entry(self.page2, textvariable=self.message2, validate="key", validatecommand=(self.validate_cmd, "%P"))
         self.input2.pack()
 
         self.btn_envoi_msg = tk.Button(self.page2, text="Envoyer", command=lambda:[self.send_msg()])  # Masquer le cadre suivant et afficher le cadre actuel
         self.btn_envoi_msg.pack()
 
         self.bouton_retour = tk.Button(self.page2, text="Déconnexion", command=lambda:[self.deconnexion()])  # Masquer le cadre suivant et afficher le cadre actuel
-        
         self.bouton_retour.pack()
         
         # self.start_sending_messages()
         self.root.mainloop()
 
-udp_client = UDPClient(SERVER_IP, SERVER_PORT)
+udp_client = UDPClient()
 udp_client.run()

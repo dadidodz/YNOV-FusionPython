@@ -31,7 +31,8 @@ class UDPServer:
                     
                     if message_received[0] == "chat":
                         print(f"Dans chat {client_address}: {message_received[1]}")
-                        self.chat.add_message(message_received[1])
+                        temp = (f"{message_received[1]}: {message_received[2]}")
+                        self.chat.add_message(temp)
                         # self.server_socket.sendto(f"{message_received[1]}".encode('utf-8'), client_address)
 
                     if message_received[0] == "upd_chat":
