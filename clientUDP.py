@@ -2,6 +2,7 @@
 
 import socket
 import tkinter as tk
+from tkinter import messagebox
 import json
 import time
 
@@ -39,14 +40,15 @@ class UDPClient:
                 response, _ = self.client_socket.recvfrom(1024)
                 print("Dans connexion, réponse du serveur :", response.decode())
                 if response:
-                    self.next_page()
+                    self.afficher_page_2()
                     self.stay_connected()
                     self.update_chat()
 
             except Exception as e:
                 print(f"Erreur lors de la connexion au serveur : {e}")
         else:
-            self.input.delete(0, 'end')
+            self.entry_pseudo.delete(0, 'end')
+            messagebox.showwarning("Erreur", "Le pseudo renseigné n'est pas assez long.")
     
     def stay_connected(self):
         try:
@@ -80,7 +82,7 @@ class UDPClient:
             message_json = json.dumps(message)
 
             self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
-            self.input2.delete(0, 'end')
+            self.entry_msg.delete(0, 'end')
 
         except Exception as e:
             print(f"Erreur lors de la connexion au serveur : {e}")
@@ -114,13 +116,13 @@ class UDPClient:
             # Planifier l'appel à la fonction toutes les 10 secondes
             self.update_msg_id = self.root.after(500, self.update_chat)
     
-    def next_page(self):
-        self.page1.pack_forget()  # Masquer le cadre actuel
-        self.page2.pack()
-    
-    def previous_page(self):
+    def afficher_page_1(self):
         self.page2.pack_forget()
         self.page1.pack()
+
+    def afficher_page_2(self):
+        self.page1.pack_forget()
+        self.page2.pack()
     
     def deconnexion(self):
         message = ["deconnexion", self.pseudo.get()]
@@ -130,85 +132,67 @@ class UDPClient:
         response, _ = self.client_socket.recvfrom(1024)
         print("Dans connexion, réponse du serveur :", response.decode())
         self.stop_requesting()
-        self.previous_page()
+        self.afficher_page_1()
         # self.client_socket.close()
     
     def on_validate(self, P):
         # Limiter à 10 caractères
         return len(P) <= 10
-
-    def on_entry_click(self, event):
-        if self.input.get() == self.placeholder:
-            self.input.delete(0, "end")
-            self.input.config(fg="black")
-
-    def on_focus_out(self, event):
-        if not self.input.get():
-            self.input.insert(0, self.placeholder)
-            self.input.config(fg="grey")
     
     def run(self):
         self.read_server_info_from_file()
         self.root = tk.Tk()
         self.root.geometry("600x600")
         self.root.title("Client UDP")
-        
+
+        # Création des pages
+        self.page1 = tk.Frame(self.root)
+        self.page2 = tk.Frame(self.root)
+        self.page1.pack()
 
 
         # -------------- PAGE 1 --------------------
-        # Création du premier cadre (page)
-        self.page1 = tk.Frame(self.root)
-        self.page1.pack()
-
-        # Contenu du premier cadre
-        self.label_1 = tk.Label(self.page1, text="Page 1")
-        self.label_1.pack()
-
-        self.label_2 = tk.Label(self.page1, text="Pseudo")
-        self.label_2.pack()
-
+        # Création variable
         self.pseudo = tk.StringVar()
+        # self.placeholder = "Entrez votre pseudo ici"
+        
+        #----------Création et config widgets
+        self.entry_pseudo = tk.Entry(self.page1, textvariable=self.pseudo)
 
-        self.placeholder = "Entrez votre pseudo ici"
-        self.input = tk.Entry(self.page1, textvariable=self.pseudo, fg="grey")
+        btn_connexion = tk.Button(self.page1, text="Connexion", command=lambda:[self.connexion()])
+        btn_connexion.config(width=20, height=2)
 
-        self.input.insert(0, self.placeholder)
-        self.input.bind("<FocusIn>", self.on_entry_click)
-        self.input.bind("<FocusOut>", self.on_focus_out)
-        self.input.pack()
+        btn_quitter = tk.Button(self.page1, text="Quitter")
+        btn_quitter.config(width=20, height=2)
 
-        self.scan_button1 = tk.Button(self.page1, text="Connexion", command=lambda:[self.connexion()])
-        self.scan_button1.config(width=20, height=2)
-        self.scan_button1.pack()
-
-        self.scan_button2 = tk.Button(self.page1, text="Quitter")
-        self.scan_button2.config(width=20, height=2)
-        self.scan_button2.pack()
+        #----------Pack widget
+        tk.Label(self.page1, text="Page 1").pack()
+        tk.Label(self.page1, text="Pseudo").pack()
+        self.entry_pseudo.pack()
+        btn_connexion.pack()
+        btn_quitter.pack()
 
 
         #-----------PAGE 2--------------
-        # Création du deuxième cadre (page)
-        self.page2 = tk.Frame(self.root)
-        # Contenu du deuxième cadre (page)
-        self.label_2 = tk.Label(self.page2, text="Page 2")
-        self.label_2.pack()
-
-        # Zone de texte pour afficher les messages
-        self.chat_display = tk.Text(self.page2, height=25, width=50, state=tk.DISABLED)
-        self.chat_display.pack()
-
+        # Création variable
         self.message2 = tk.StringVar()
+
+        #----------Création et config widgets
+        self.chat_display = tk.Text(self.page2, height=25, width=50, state=tk.DISABLED)
         self.validate_cmd = self.page2.register(self.on_validate)
-        self.input2 = tk.Entry(self.page2, textvariable=self.message2, validate="key", validatecommand=(self.validate_cmd, "%P"))
-        self.input2.pack()
-
-        self.btn_envoi_msg = tk.Button(self.page2, text="Envoyer", command=lambda:[self.send_msg()])  # Masquer le cadre suivant et afficher le cadre actuel
-        self.btn_envoi_msg.pack()
-
-        self.bouton_retour = tk.Button(self.page2, text="Déconnexion", command=lambda:[self.deconnexion()])  # Masquer le cadre suivant et afficher le cadre actuel
-        self.bouton_retour.pack()
+        self.entry_msg = tk.Entry(self.page2, textvariable=self.message2, validate="key", validatecommand=(self.validate_cmd, "%P"))
+        self.btn_envoyer = tk.Button(self.page2, text="Envoyer", command=lambda:[self.send_msg()])
+        self.btn_retour = tk.Button(self.page2, text="Déconnexion", command=lambda:[self.deconnexion()])
         
-        # self.start_sending_messages()
+        #----------Pack widget
+        tk.Label(self.page2, text="Page 2").pack()
+        self.chat_display.pack()
+        self.entry_msg.pack()
+        self.btn_envoyer.pack()
+        self.btn_retour.pack()
+
+
+
         self.root.mainloop()
 
 udp_client = UDPClient()
