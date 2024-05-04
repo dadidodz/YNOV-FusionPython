@@ -1,6 +1,18 @@
-my_dict = {'a': 1, 'b': 2, 'c': 3}
+import tkinter as tk
+from tkinter import ttk
 
-# Obtention de la longueur du dictionnaire
-length = len(my_dict)
+root = tk.Tk()
 
-print("Longueur du dictionnaire :", length)
+# Création d'un style ttk pour les boutons
+style = ttk.Style()
+
+# Configuration du style pour le bouton
+style.configure("Custom.TButton",
+                height=50,  # Définit la hauteur du bouton
+                )
+
+# Création du bouton ttk avec le style personnalisé
+bouton_ttk = ttk.Button(root, text="", style="Custom.TButton")
+bouton_ttk.pack()
+
+root.mainloop()

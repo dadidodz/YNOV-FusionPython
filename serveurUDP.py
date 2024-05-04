@@ -55,7 +55,8 @@ class UDPServer:
                         reponse_json = json.dumps(reponse)
                         self.server_socket.sendto(reponse_json.encode(), client_address)
                     
-                    if message_received[0] == "Partie trouvée ?":
+                    if message_received[0] == "partie trouvee":
+                        # print(f"{}{self.clients[client_address][3]}")
                         if self.clients[client_address][3] != None :
                             reponse = ["Oui"]
                             reponse_json = json.dumps(reponse)
@@ -83,6 +84,8 @@ class UDPServer:
                 inactive_clients = [address for address, values in self.clients.items() if current_time - values[4] > 10]
                 for address in inactive_clients:
                     del self.clients[address]
+                    if address in self.liste_attente:
+                        self.liste_attente.remove(address)
                     print(f"Client {address} supprimé pour inactivité.")
                 time.sleep(10)
             except Exception as e:
@@ -114,11 +117,11 @@ class UDPServer:
                 # Vérifier si les adresses sont différentes et si les MMR sont égaux
                 if client_address != other_client_address and self.clients[client_address][0] != self.clients[other_client_address][0] and self.clients[client_address][1] == self.clients[other_client_address][1]:
                     # Ajouter les adresses des joueurs ayant le même MMR à la liste temporaire
-                    # id_partie = random.randint(999, 10000)
+                    id_partie = random.randint(999, 10000)
                     # partie = Morpion(id_partie, client_address, other_client_address)
                     # self.parties[partie.id_partie] = partie
-                    # self.clients[client_address][3] = partie.id_partie
-                    # self.clients[other_client_address][3] = partie.id_partie
+                    self.clients[client_address][3] = id_partie #self.clients[client_address][3] = partie.id_partie
+                    self.clients[other_client_address][3] = id_partie #self.clients[other_client_address][3] = partie.id_partie
                     # Retire les deux joueurs qui viennent de trouver une partie de la liste d'attente
                     self.liste_attente.remove(client_address)
                     self.liste_attente.remove(other_client_address)

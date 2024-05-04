@@ -1,8 +1,9 @@
 # UTILISER CE CLIENT
 
 import socket
-import tkinter as tk
+from tkinter import *
 from tkinter import messagebox
+from tkinter.ttk import *
 import json
 import time
 import re
@@ -85,6 +86,7 @@ class UDPClient:
         if self.keep_alive_id:
             self.root.after_cancel(self.keep_alive_id)
             self.root.after_cancel(self.update_msg_id)
+            # self.root.after_cancel(self.partie_trouvee_id)
             self.keep_alive_id = None
     
     def send_msg(self):
@@ -110,36 +112,24 @@ class UDPClient:
             if response:
                 if message_received[0] == "new_msg":
                     for msg in message_received[1]:
-                        self.chat_display.configure(state=tk.NORMAL)
+                        self.chat_display.configure(state=NORMAL)
                         if self.pseudo.get() == msg[0]:
                             txt = (f"{msg[0]} (You) : {msg[1]}\n")
                         else:
                             txt = (f"{msg[0]} : {msg[1]}\n")
-                        self.chat_display.insert(tk.END, txt)
-                        self.chat_display.configure(state=tk.DISABLED)
-                        self.chat_display.see(tk.END)  # Faire défiler vers le bas
+                        self.chat_display.insert(END, txt)
+                        self.chat_display.configure(state=DISABLED)
+                        self.chat_display.see(END)  # Faire défiler vers le bas
                         self.last_update_msg = time.time()
                 
                 if message_received[0] == "ras":
                     pass
 
         except Exception as e:
-            print(f"Erreur lors de l'envoi du message de présence : {e}")
+            print(f"Erreur lors de la mise à jour du chat : {e}")
         
         if self.keep_alive_active:
             self.update_msg_id = self.root.after(1000, self.update_chat)
-    
-    def afficher_page_1(self):
-        self.page2.pack_forget()
-        self.page1.pack()
-
-    def afficher_page_2(self):
-        self.page1.pack_forget()
-        self.page2.pack()
-    
-    def retour_page_2(self):
-        self.page3.pack_forget()
-        self.page2.pack()
     
     def deconnexion(self):
         message = ["deconnexion", self.pseudo.get()]
@@ -152,14 +142,6 @@ class UDPClient:
             self.stop_requesting()
             self.afficher_page_1()
             # self.client_socket.close()
-    
-    def on_validate(self, P):
-        # Limiter à 10 caractères
-        return len(P) <= 10
-
-    def jouer(self):
-        self.page2.pack_forget()
-        self.page3.pack()
     
     def rejoindre_file_attente(self):
         try:
@@ -177,22 +159,25 @@ class UDPClient:
     
     def partie_trouvee(self):
         try:
+            print("Partie trouvée ?")
             # Envoyer un message au serveur pour indiquer que le client est toujours actif
-            request = ["Partie trouvée ?"]
+            request = ["partie trouvee"]
             request_json = json.dumps(request)
             self.client_socket.sendto(request_json.encode(), (self.server_ip, self.server_port))
 
-            response, _ = self.server_socket.recvfrom(1024)
+            response, _ = self.client_socket.recvfrom(1024)
             message_received = json.loads(response.decode())
 
             if message_received[0] == "Oui":
-                self.jouer()
+                print("Réponse serveur : Oui")
+                self.afficher_page_3()
             else:
+                print("Réponse serveur : Non")
                 if self.keep_alive_active:
                     # Planifier l'appel à la fonction toutes les 10 secondes
                     self.partie_trouvee_id = self.root.after(1000, self.partie_trouvee)
         except Exception as e:
-            print(f"Erreur lors de l'envoi du message de présence : {e}")
+            print(f"Erreur lors de la demande: {e}")
 
     def play(self, row, col):
         pass
@@ -215,36 +200,87 @@ class UDPClient:
         #         else:
         #             self.current_player = "O" if self.current_player == "X" else "X"
     
+    ######## Méthodes avec actions sur la fenetre tkinter
+    def on_validate(self, P):
+        # Limiter à 10 caractères
+        return len(P) <= 10
+
+    def afficher_page_1(self):
+        self.page2.pack_forget()
+        self.page1.pack()
+        self.root.geometry("400x200")
+
+    def afficher_page_2(self):
+        self.page1.pack_forget()
+        self.page2.pack()
+        self.root.geometry("400x300")
+    
+    def retour_page_2(self):
+        self.page3.pack_forget()
+        self.page2.pack()
+        self.root.geometry("400x300")
+    
+    def afficher_page_3(self):
+        self.page2.pack_forget()
+        self.page3.pack()
+        self.root.geometry("600x600")
+
     def run(self):
         self.read_server_info_from_file()
-        self.root = tk.Tk()
-        self.root.geometry("600x600")
+        self.root = Tk()
+        self.root.geometry("400x200")
         self.root.title("Client UDP")
 
         # Création des pages
-        self.page1 = tk.Frame(self.root)
-        self.page2 = tk.Frame(self.root)
-        self.page3 = tk.Frame(self.root)
+        self.page1 = Frame(self.root)
+        self.page2 = Frame(self.root)
+        self.page3 = Frame(self.root)
         self.page1.pack()
 
 
         # -------------- PAGE 1 --------------------
         # Création variable
-        self.pseudo = tk.StringVar()
-        # self.placeholder = "Entrez votre pseudo ici"
+        self.pseudo = StringVar()
+
+        #--------------------Création des Styles--------------------#
+        #----------Boutons----------#
+        # Créé un style appliqué automatiquement aux boutons grâce au nom "TButton"
+        buttons_style = Style()
+        buttons_style.configure("TButton",
+                                foreground="black",  # Couleur du texte
+                                font=("Arial", 10),  # Police et taille de caractères
+                                bordercolor="black",  # Couleur de la bordure
+                                padding=3,  # Espace entre le contenu et la bordure
+                                width=15,  # Largeur du bouton
+                                height=5,  # Hauteur du bouton
+                                anchor="center",  # Alignement du contenu
+                                justify="center"  # Alignement horizontal du texte
+                                )
+        
+        btn_case_morpion = Style()
+        btn_case_morpion.configure("Case.TButton",
+                                    foreground="black",  # Couleur du texte
+                                    font=("Arial", 10),  # Police et taille de caractères
+                                    bordercolor="black",  # Couleur de la bordure
+                                    paddingy=20,  # Espace entre le contenu et la bordure
+                                    width=10,  # Largeur du bouton
+                                    height=50,  # Hauteur du bouton
+                                    anchor="center",  # Alignement du contenu
+                                    justify="center"  # Alignement horizontal du texte
+                                    )
         
         #----------Création et config widgets
-        self.entry_pseudo = tk.Entry(self.page1, textvariable=self.pseudo)
+        self.entry_pseudo = Entry(self.page1, textvariable=self.pseudo)
 
-        btn_connexion = tk.Button(self.page1, text="Connexion", command=lambda:[self.connexion()])
-        btn_connexion.config(width=20, height=2)
+        btn_connexion = Button(self.page1, text="Se connecter", command=lambda:[self.connexion()])
+        # btn_connexion.config(width=20, height=2)
 
-        btn_quitter = tk.Button(self.page1, text="Quitter")
-        btn_quitter.config(width=20, height=2)
+        btn_quitter = Button(self.page1, text="Quitter", command=lambda: self.root.destroy())
+        # btn_quitter.config(width=20, height=2)
 
         #----------Pack widget
-        tk.Label(self.page1, text="Page 1").pack()
-        tk.Label(self.page1, text="Pseudo").pack()
+        Label(self.page1, text="Page 1").pack()
+        Label(self.page1, text="Pseudo").pack()
         self.entry_pseudo.pack()
         btn_connexion.pack()
         btn_quitter.pack()
@@ -255,11 +291,11 @@ class UDPClient:
         
 
         #----------Création et config widgets
-        self.btn_jouer = tk.Button(self.page2, text="Jouer", command=lambda:[self.rejoindre_file_attente()])
-        self.btn_retour = tk.Button(self.page2, text="Déconnexion", command=lambda:[self.deconnexion()])
+        self.btn_jouer = Button(self.page2, text="Trouver une partie", command=lambda:[self.rejoindre_file_attente()])
+        self.btn_retour = Button(self.page2, text="Déconnexion", command=lambda:[self.deconnexion()])
         
         #----------Pack widget
-        tk.Label(self.page2, text="Page 2").pack()
+        Label(self.page2, text="Page 2").pack()
         
         self.btn_jouer.pack()
         self.btn_retour.pack()
@@ -267,14 +303,14 @@ class UDPClient:
 
         #-----------PAGE 3--------------
         # Création variable
-        self.message2 = tk.StringVar()
+        self.message2 = StringVar()
 
         #----------Création et config widgets
-        self.chat_display = tk.Text(self.page3, height=8, width=25, state=tk.DISABLED)
+        self.chat_display = Text(self.page3, height=8, width=25, state=DISABLED)
         self.validate_cmd = self.page3.register(self.on_validate)
-        self.entry_msg = tk.Entry(self.page3, textvariable=self.message2, validate="key", validatecommand=(self.validate_cmd, "%P"))
-        self.btn_envoyer = tk.Button(self.page3, text="Envoyer", command=lambda:[self.send_msg()])
-        self.btn_retour = tk.Button(self.page3, text="Retour", command=lambda:[self.retour_page_2()])
+        self.entry_msg = Entry(self.page3, textvariable=self.message2, validate="key", validatecommand=(self.validate_cmd, "%P"))
+        self.btn_envoyer = Button(self.page3, text="Envoyer", command=lambda:[self.send_msg()])
+        self.btn_retour = Button(self.page3, text="Retour", command=lambda:[self.retour_page_2()])
 
         #----------Pack widget
         self.chat_display.grid(row=3, column=0, columnspan=3, sticky="ew")
@@ -291,9 +327,8 @@ class UDPClient:
 
         for i in range(3):
             for j in range(3):
-                button = tk.Button(self.page3, text="", font=("Helvetica", 24), width=4, height=2,
-                                   command=lambda row=i, col=j: self.play(row, col))
-                button.grid(row=i, column=j, sticky="ew")
+                button = Button(self.page3, text="", style="Case.TButton", command=lambda row=i, col=j: self.play(row, col))
+                button.grid(row=i, column=j, ipady=10, ipadx=10)
                 self.buttons[i][j] = button
 
 
