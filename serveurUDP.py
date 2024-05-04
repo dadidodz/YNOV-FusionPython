@@ -51,9 +51,19 @@ class UDPServer:
                     
                     if message_received[0] == "recherche partie":
                         self.clients[client_address][2] = 1
-                        reponse = ["recherche partie", "Vous êtes en recherche de partie"]
+                        reponse = ["recherche partie", "Vous etes en recherche de partie"]
                         reponse_json = json.dumps(reponse)
                         self.server_socket.sendto(reponse_json.encode(), client_address)
+                    
+                    if message_received[0] == "Partie trouvée ?":
+                        if self.clients[client_address][3] != None :
+                            reponse = ["Oui"]
+                            reponse_json = json.dumps(reponse)
+                            self.server_socket.sendto(reponse_json.encode(), client_address)
+                        else:
+                            reponse = ["Non"]
+                            reponse_json = json.dumps(reponse)
+                            self.server_socket.sendto(reponse_json.encode(), client_address)
 
                     if message_received[0] == "deconnexion":
                         del self.clients[client_address]

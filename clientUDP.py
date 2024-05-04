@@ -148,9 +148,10 @@ class UDPClient:
         self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
         response, _ = self.client_socket.recvfrom(1024)
         print("Dans connexion, réponse du serveur :", response.decode())
-        self.stop_requesting()
-        self.afficher_page_1()
-        # self.client_socket.close()
+        if response:
+            self.stop_requesting()
+            self.afficher_page_1()
+            # self.client_socket.close()
     
     def on_validate(self, P):
         # Limiter à 10 caractères
@@ -168,10 +169,31 @@ class UDPClient:
             self.client_socket.sendto(request_json.encode(), (self.server_ip, self.server_port))
             response, _ = self.client_socket.recvfrom(1024)
             print("Dans rejoindre_file_attente, réponse du serveur :", response.decode())
+            if response:
+                self.partie_trouvee()
 
         except Exception as e:
             print(f"Erreur lors de la tentative d'entrée dans la file d'attente: {e}")
     
+    def partie_trouvee(self):
+        try:
+            # Envoyer un message au serveur pour indiquer que le client est toujours actif
+            request = ["Partie trouvée ?"]
+            request_json = json.dumps(request)
+            self.client_socket.sendto(request_json.encode(), (self.server_ip, self.server_port))
+
+            response, _ = self.server_socket.recvfrom(1024)
+            message_received = json.loads(response.decode())
+
+            if message_received[0] == "Oui":
+                self.jouer()
+            else:
+                if self.keep_alive_active:
+                    # Planifier l'appel à la fonction toutes les 10 secondes
+                    self.partie_trouvee_id = self.root.after(1000, self.partie_trouvee)
+        except Exception as e:
+            print(f"Erreur lors de l'envoi du message de présence : {e}")
+
     def play(self, row, col):
         pass
         # if self.board[row][col] == " ":
