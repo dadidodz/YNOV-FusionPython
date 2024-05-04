@@ -1,2 +1,1 @@
-
-                        # label_9.pack()
+self.buttons[row][col].config(text=self.current_player)
