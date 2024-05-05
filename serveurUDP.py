@@ -37,11 +37,13 @@ class UDPServer:
                     
                     if message_received[0] == "chat":
                         print(f"Dans chat {client_address} Pseudo : {self.clients[client_address][0]}")
-                        self.chat.add_message(self.clients[client_address][0], message_received[1])
+                        self.parties[self.clients[client_address][3]].chat.add_message(self.clients[client_address][0], message_received[1])
+                        # self.chat.add_message(self.clients[client_address][0], message_received[1])
 
                     if message_received[0] == "upd_chat":
-                        if self.chat.last_updated > message_received[1]:
-                            messages = self.chat.get_messages_after_time(message_received[1])
+                        if self.parties[self.clients[client_address][3]].chat.last_updated > message_received[1]: #self.chat.last_updated > message_received[1]
+                            messages = self.parties[self.clients[client_address][3]].chat.get_messages_after_time(message_received[1])
+                            # messages = self.chat.get_messages_after_time(message_received[1])
                             reponse = ["new_msg", messages]
                             reponse_json = json.dumps(reponse)
                             self.server_socket.sendto(reponse_json.encode(), client_address)
@@ -53,6 +55,17 @@ class UDPServer:
                     if message_received[0] == "recherche partie":
                         self.clients[client_address][2] = 1
                         reponse = ["recherche partie", "Vous etes en recherche de partie"]
+                        reponse_json = json.dumps(reponse)
+                        self.server_socket.sendto(reponse_json.encode(), client_address)
+                    
+                    if message_received[0] == "quitter file attente":
+                        # print("Message provenant de quitter file d'attente recu")
+                        self.clients[client_address][2] = 0
+                        if client_address in self.liste_attente:
+                            self.liste_attente.remove(client_address)
+                        print(f"Retrait du joueur {self.clients[client_address][0]} de la file d'attente ({self.clients[client_address]})")
+
+                        reponse = ["retrait file attente"]
                         reponse_json = json.dumps(reponse)
                         self.server_socket.sendto(reponse_json.encode(), client_address)
                     
@@ -116,6 +129,7 @@ class UDPServer:
                 ## Inutile si on retire correctement les joueurs quand ils ne recherchent plus une partie
                 ## ou bien s'ils sont déjà dans une partie
                 else:
+                    print("Retrait de la file d'attente")
                     if adresse_joueur in self.liste_attente:
                         self.liste_attente.remove(adresse_joueur)
                         print(f"Joueur {self.clients[adresse_joueur][0]} a été retiré de la file d'attente")

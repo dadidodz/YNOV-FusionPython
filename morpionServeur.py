@@ -1,12 +1,14 @@
 import tkinter as tk
 from tkinter import messagebox
 import time
+from chat import Chat
 
 class MorpionServeur:
     # def __init__(self, id_partie, addr_joueur1, addr_joueur2, pseudo_j1, pseudo_j2):
     def __init__(self, id_partie, pseudo_j1, pseudo_j2):
         self.id_partie = id_partie
         self.temps_derniere_action = time.time()
+        self.chat = Chat()
         # self.addr_joueur_1 = addr_joueur1
         # self.addr_joueur_2 = addr_joueur2
         self.pseudo_j1 = pseudo_j1
