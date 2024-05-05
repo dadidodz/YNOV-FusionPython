@@ -20,6 +20,8 @@ class MorpionServeur:
                 self.historique_actions.append((row, col, self.joueurs[self.current_player], time.time()))
                 self.temps_derniere_action = time.time()
 
+                self.current_player = self.joueurs[addr_joueur2] if self.current_player == self.joueurs[addr_joueur1] else self.joueurs[addr_joueur1]
+
                 # if self.check_winner():
                 #     gagnant
                 #     messagebox.showinfo("Fin de partie", f"Le joueur {self.current_player} a gagné!")
