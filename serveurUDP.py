@@ -4,6 +4,7 @@ import time
 import json
 import random
 from chat import Chat
+from morpionServeur import MorpionServeur
 
 class UDPServer:
     def __init__(self, host, port):
@@ -65,6 +66,20 @@ class UDPServer:
                             reponse = ["Non"]
                             reponse_json = json.dumps(reponse)
                             self.server_socket.sendto(reponse_json.encode(), client_address)
+                    
+                    if message_received[0] == "maj partie":
+                        if self.parties[self.clients[client_address][3]].temps_derniere_action > message_received[1]:
+                            actions = self.parties[self.clients[client_address][3]].get_actions_after_time(message_received[1])
+                            reponse = ["nouvelle action", actions]
+                            reponse_json = json.dumps(reponse)
+                            self.server_socket.sendto(reponse_json.encode(), client_address)
+                        else:
+                            reponse = ["zero nouvelle action"]
+                            reponse_json = json.dumps(reponse)
+                            self.server_socket.sendto(reponse_json.encode(), client_address)
+                    
+                    if message_received[0] == "jouer ici":
+                        self.parties[self.clients[client_address][3]].jouer(message_received[1], message_received[2], client_address) # row, col, addr_joueur,)
 
                     if message_received[0] == "deconnexion":
                         del self.clients[client_address]
@@ -118,8 +133,8 @@ class UDPServer:
                 if client_address != other_client_address and self.clients[client_address][0] != self.clients[other_client_address][0] and self.clients[client_address][1] == self.clients[other_client_address][1]:
                     # Ajouter les adresses des joueurs ayant le même MMR à la liste temporaire
                     id_partie = random.randint(999, 10000)
-                    # partie = Morpion(id_partie, client_address, other_client_address)
-                    # self.parties[partie.id_partie] = partie
+                    partie = MorpionServeur(id_partie, client_address, other_client_address)
+                    self.parties[partie.id_partie] = partie
                     self.clients[client_address][3] = id_partie #self.clients[client_address][3] = partie.id_partie
                     self.clients[other_client_address][3] = id_partie #self.clients[other_client_address][3] = partie.id_partie
                     # Retire les deux joueurs qui viennent de trouver une partie de la liste d'attente

@@ -7,7 +7,7 @@ from tkinter.ttk import *
 import json
 import time
 import re
-from morpion import Morpion
+# from morpion import Morpion
 
 # SERVER_IP = '10.34.0.248'  # Adresse IP du serveur
 # Port sur lequel le serveur écoute
@@ -20,6 +20,7 @@ class UDPClient:
         self.keep_alive_active = True
         self.keep_alive_id = None
         self.last_update_msg = time.time()
+        self.last_update_partie = None
         self.mmr = 1000
     
     def read_server_info_from_file(self, filename='config.txt'):
@@ -86,7 +87,7 @@ class UDPClient:
         if self.keep_alive_id:
             self.root.after_cancel(self.keep_alive_id)
             self.root.after_cancel(self.update_msg_id)
-            # self.root.after_cancel(self.partie_trouvee_id)
+            self.root.after_cancel(self.partie_trouvee_id)
             self.keep_alive_id = None
     
     def send_msg(self):
@@ -171,6 +172,8 @@ class UDPClient:
             if message_received[0] == "Oui":
                 print("Réponse serveur : Oui")
                 self.afficher_page_3()
+                self.last_update_partie = time.time()
+                self.maj_partie()
             else:
                 print("Réponse serveur : Non")
                 if self.keep_alive_active:
@@ -178,9 +181,43 @@ class UDPClient:
                     self.partie_trouvee_id = self.root.after(1000, self.partie_trouvee)
         except Exception as e:
             print(f"Erreur lors de la demande: {e}")
+    
+    def maj_partie(self):
+        try:
+            # Envoyer un message au serveur pour savoir si une action à été effectué dans la partie
+            request = ["maj partie", self.last_update_partie]
+            request_json = json.dumps(request)
+            
+            self.client_socket.sendto(request_json.encode(), (self.server_ip, self.server_port))
+            response, _ = self.client_socket.recvfrom(1024)
+            message_received = json.loads(response.decode())
+            if response:
+                if message_received[0] == "nouvelle action":
+                    for actions in message_received[1]:
+                        row, col, txt = actions
+                        self.buttons[row][col].config(text=txt)
+                        self.last_update_partie = time.time()
+                
+                if message_received[0] == "zero nouvelle action":
+                    pass
+
+        except Exception as e:
+            print(f"Erreur lors de la mise à jour de la partie : {e}")
+        
+        if self.keep_alive_active:
+            self.maj_partie_id = self.root.after(1000, self.maj_partie)
+        
 
     def play(self, row, col):
-        pass
+        try:
+            print(f"Je peux jouer ici {row}, {col}")
+            # Envoyer un message au serveur pour indiquer que le client est toujours actif
+            request = ["jouer ici", row, col]
+            request_json = json.dumps(request)
+            self.client_socket.sendto(request_json.encode(), (self.server_ip, self.server_port))
+
+        except Exception as e:
+            print(f"Erreur lors de la demande pour jouer à cette case: {e}")
         # if self.board[row][col] == " ":
         #     try:
         #         request = ["action", row, col]
