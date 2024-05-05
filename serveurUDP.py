@@ -33,7 +33,7 @@ class UDPServer:
                     if message_received[0] == "connexion":
                         infos = [message_received[1], message_received[2], 0, None, time.time()]
                         self.clients[client_address] = infos
-                        self.server_socket.sendto(f"Joueur {self.clients[client_address][0]} est connecté.".encode('utf-8'), client_address)
+                        self.server_socket.sendto(f"{self.clients[client_address][0]}".encode('utf-8'), client_address)
                     
                     if message_received[0] == "chat":
                         print(f"Dans chat {client_address} Pseudo : {self.clients[client_address][0]}")
@@ -79,7 +79,7 @@ class UDPServer:
                             self.server_socket.sendto(reponse_json.encode(), client_address)
                     
                     if message_received[0] == "jouer ici":
-                        self.parties[self.clients[client_address][3]].jouer(message_received[1], message_received[2], client_address) # row, col, addr_joueur,)
+                        self.parties[self.clients[client_address][3]].jouer(message_received[1], message_received[2], self.clients[client_address][0]) # row, col, addr_joueur,)
 
                     if message_received[0] == "deconnexion":
                         del self.clients[client_address]
@@ -133,7 +133,8 @@ class UDPServer:
                 if client_address != other_client_address and self.clients[client_address][0] != self.clients[other_client_address][0] and self.clients[client_address][1] == self.clients[other_client_address][1]:
                     # Ajouter les adresses des joueurs ayant le même MMR à la liste temporaire
                     id_partie = random.randint(999, 10000)
-                    partie = MorpionServeur(id_partie, client_address, other_client_address)
+                    # partie = MorpionServeur(id_partie, client_address, other_client_address, self.clients[client_address][0], self.clients[other_client_address][0])
+                    partie = MorpionServeur(id_partie, self.clients[client_address][0], self.clients[other_client_address][0])
                     self.parties[partie.id_partie] = partie
                     self.clients[client_address][3] = id_partie #self.clients[client_address][3] = partie.id_partie
                     self.clients[other_client_address][3] = id_partie #self.clients[other_client_address][3] = partie.id_partie

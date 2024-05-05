@@ -3,24 +3,41 @@ from tkinter import messagebox
 import time
 
 class MorpionServeur:
-    def __init__(self, id_partie, addr_joueur1, addr_joueur2):
+    # def __init__(self, id_partie, addr_joueur1, addr_joueur2, pseudo_j1, pseudo_j2):
+    def __init__(self, id_partie, pseudo_j1, pseudo_j2):
         self.id_partie = id_partie
         self.temps_derniere_action = time.time()
+        # self.addr_joueur_1 = addr_joueur1
+        # self.addr_joueur_2 = addr_joueur2
+        self.pseudo_j1 = pseudo_j1
+        self.pseudo_j2 = pseudo_j2
         self.joueurs = {}
-        self.joueurs[addr_joueur1] = "X"
-        self.joueurs[addr_joueur2] = "O"
-        self.current_player = addr_joueur1
+        self.joueurs[self.pseudo_j1] = "X"
+        self.joueurs[self.pseudo_j2] = "O"
+        self.current_player = pseudo_j1
         self.historique_actions = []
         self.board = [[" " for _ in range(3)] for _ in range(3)]
+        self.is_partie_finie = False
+        self.gagnant = None
 
-    def jouer(self, row, col, addr_joueur):
-        if self.current_player == addr_joueur:
-            if self.board[row][col] == " ":
-                self.board[row][col] = self.joueurs[self.current_player]
-                self.historique_actions.append((row, col, self.joueurs[self.current_player], time.time()))
-                self.temps_derniere_action = time.time()
+    def jouer(self, row, col, pseudo_joueur):
+        if not self.is_partie_finie:
+            if self.current_player == pseudo_joueur:
+                if self.board[row][col] == " ":
+                    self.board[row][col] = self.joueurs[self.current_player]
+                    
+                    self.temps_derniere_action = time.time()
 
-                self.current_player = self.joueurs[addr_joueur2] if self.current_player == self.joueurs[addr_joueur1] else self.joueurs[addr_joueur1]
+                    if self.check_winner():
+                        self.is_partie_finie = True
+                        self.gagnant = self.current_player
+                        self.historique_actions.append((row, col, self.joueurs[self.current_player], self.is_partie_finie, self.gagnant, time.time()))
+                    elif self.is_board_full():
+                        self.is_partie_finie = True
+                        self.historique_actions.append((row, col, self.joueurs[self.current_player], self.is_partie_finie, self.gagnant, time.time()))
+                    else:
+                        self.historique_actions.append((row, col, self.joueurs[self.current_player], self.is_partie_finie, None, time.time()))
+                        self.current_player = self.pseudo_j2 if self.current_player == self.pseudo_j1 else self.pseudo_j1
 
                 # if self.check_winner():
                 #     gagnant
@@ -34,7 +51,7 @@ class MorpionServeur:
     
     def get_actions_after_time(self, timestamp):
         # Récupérer les messages envoyés après le temps donné
-        action_after_time = [(row, col, txt) for row, col, txt, action_time in self.historique_actions if action_time > timestamp]
+        action_after_time = [(row, col, txt, etat_partie, gagnant) for row, col, txt, etat_partie, gagnant, action_time in self.historique_actions if action_time > timestamp]
         return action_after_time
 
 
@@ -63,10 +80,10 @@ class MorpionServeur:
                 self.buttons[i][j].config(text="")
         self.current_player = "X"
 
-    def run(self):
-        self.window.mainloop()
+#     def run(self):
+#         self.window.mainloop()
 
-# Utilisation du jeu de Morpion
-if __name__ == "__main__":
-    morpion = Morpion()
-    morpion.run()
+# # Utilisation du jeu de Morpion
+# if __name__ == "__main__":
+#     morpion = Morpion()
+#     morpion.run()

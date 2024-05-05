@@ -21,6 +21,7 @@ class UDPClient:
         self.keep_alive_id = None
         self.last_update_msg = time.time()
         self.last_update_partie = None
+        self.pseudo_client = ""
         self.mmr = 1000
     
     def read_server_info_from_file(self, filename='config.txt'):
@@ -43,6 +44,7 @@ class UDPClient:
 
                 self.client_socket.sendto(request_json.encode(), (self.server_ip, self.server_port))
                 response, _ = self.client_socket.recvfrom(1024)
+                
                 print("Dans connexion, réponse du serveur :", response.decode())
                 if response:
                     self.keep_alive_active = True
@@ -59,6 +61,7 @@ class UDPClient:
     def verification_pseudo(self):
         characters_interdis = r"[^\w\s]"
         if len(self.pseudo.get()) < 3 or re.search(characters_interdis, self.pseudo.get()):
+            # self.pseudo_client = self.pseudo.get()
             return True
         else:
             return False
@@ -194,8 +197,14 @@ class UDPClient:
             if response:
                 if message_received[0] == "nouvelle action":
                     for actions in message_received[1]:
-                        row, col, txt = actions
+                        row, col, txt, etat_partie, gagnant = actions
                         self.buttons[row][col].config(text=txt)
+                        if etat_partie:
+                            if gagnant == None:
+                                messagebox.showinfo("Fin de partie", "Match nul!")
+                            else:
+                                messagebox.showinfo("Fin de partie", f"Le joueur {gagnant} a gagné!")
+
                         self.last_update_partie = time.time()
                 
                 if message_received[0] == "zero nouvelle action":
@@ -261,6 +270,14 @@ class UDPClient:
         self.page2.pack_forget()
         self.page3.pack()
         self.root.geometry("600x600")
+    
+    def modif_pseudo(self):
+        self.pseudo_client = self.pseudo.get()
+        self.label_pseudo.config(text=f"Connecté en tant que : {self.pseudo_client}")
+    
+    def action_btn_jouer(self):
+        self.btn_jouer.config(state="disabled")
+        self.btn_cancel_jouer.config(state="enabled")
 
     def run(self):
         self.read_server_info_from_file()
@@ -288,7 +305,7 @@ class UDPClient:
                                 font=("Arial", 10),  # Police et taille de caractères
                                 bordercolor="black",  # Couleur de la bordure
                                 padding=3,  # Espace entre le contenu et la bordure
-                                width=15,  # Largeur du bouton
+                                width=20,  # Largeur du bouton
                                 height=5,  # Hauteur du bouton
                                 anchor="center",  # Alignement du contenu
                                 justify="center"  # Alignement horizontal du texte
@@ -309,7 +326,7 @@ class UDPClient:
         #----------Création et config widgets
         self.entry_pseudo = Entry(self.page1, textvariable=self.pseudo)
 
-        btn_connexion = Button(self.page1, text="Se connecter", command=lambda:[self.connexion()])
+        btn_connexion = Button(self.page1, text="Se connecter", command=lambda:[self.modif_pseudo(), self.connexion()])
         # btn_connexion.config(width=20, height=2)
 
         btn_quitter = Button(self.page1, text="Quitter", command=lambda: self.root.destroy())
@@ -328,13 +345,16 @@ class UDPClient:
         
 
         #----------Création et config widgets
-        self.btn_jouer = Button(self.page2, text="Trouver une partie", command=lambda:[self.rejoindre_file_attente()])
+        self.btn_jouer = Button(self.page2, text="Trouver une partie", command=lambda:[self.rejoindre_file_attente(), self.action_btn_jouer()])
+        self.btn_cancel_jouer = Button(self.page2, text="Quitter la file d'attente", state="disabled", command=lambda:[])
         self.btn_retour = Button(self.page2, text="Déconnexion", command=lambda:[self.deconnexion()])
         
         #----------Pack widget
         Label(self.page2, text="Page 2").pack()
-        
+        self.label_pseudo = Label(self.page2, text="")
+        self.label_pseudo.pack()
         self.btn_jouer.pack()
+        self.btn_cancel_jouer.pack()
         self.btn_retour.pack()
 
 
