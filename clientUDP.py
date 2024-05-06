@@ -9,7 +9,7 @@ import time
 import re
 # from morpion import Morpion
 
-# SERVER_IP = '10.34.0.248'  # Adresse IP du serveur
+# SERVER_IP = '10.34.0.248'  # Adresse IP du serveur #192.168.1.45
 # Port sur lequel le serveur écoute
 
 class UDPClient:
@@ -83,70 +83,6 @@ class UDPClient:
             # Planifier l'appel à la fonction toutes les 10 secondes
             self.keep_alive_id = self.root.after(10000, self.stay_connected)
     
-    def stop_requesting(self):
-        # Arrêter la planification des appels récurrents
-        self.keep_alive_active = False
-        # Annuler l'appel planifié
-        if self.keep_alive_id:
-            self.root.after_cancel(self.keep_alive_id)
-            self.root.after_cancel(self.update_msg_id)
-            self.root.after_cancel(self.partie_trouvee_id)
-            self.keep_alive_id = None
-    
-    def send_msg(self):
-        try:
-            request = ["chat", self.message2.get()]
-            request_json = json.dumps(request)
-
-            self.client_socket.sendto(request_json.encode(), (self.server_ip, self.server_port))
-            self.entry_msg.delete(0, 'end')
-
-        except Exception as e:
-            print(f"Erreur lors de la connexion au serveur : {e}")
-    
-    def update_chat(self):
-        try:
-            # Envoyer un message au serveur pour indiquer que le client est toujours actif
-            request = ["upd_chat", self.last_update_msg]
-            request_json = json.dumps(request)
-            
-            self.client_socket.sendto(request_json.encode(), (self.server_ip, self.server_port))
-            response, _ = self.client_socket.recvfrom(1024)
-            message_received = json.loads(response.decode())
-            if response:
-                if message_received[0] == "new_msg":
-                    for msg in message_received[1]:
-                        self.chat_display.configure(state=NORMAL)
-                        if self.pseudo.get() == msg[0]:
-                            txt = (f"{msg[0]} (You) : {msg[1]}\n")
-                        else:
-                            txt = (f"{msg[0]} : {msg[1]}\n")
-                        self.chat_display.insert(END, txt)
-                        self.chat_display.configure(state=DISABLED)
-                        self.chat_display.see(END)  # Faire défiler vers le bas
-                        self.last_update_msg = time.time()
-                
-                if message_received[0] == "ras":
-                    pass
-
-        except Exception as e:
-            print(f"Erreur lors de la mise à jour du chat : {e}")
-        
-        if self.keep_alive_active:
-            self.update_msg_id = self.root.after(1000, self.update_chat)
-    
-    def deconnexion(self):
-        message = ["deconnexion", self.pseudo.get()]
-        message_json = json.dumps(message)
-
-        self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
-        response, _ = self.client_socket.recvfrom(1024)
-        print("Dans connexion, réponse du serveur :", response.decode())
-        if response:
-            self.stop_requesting()
-            self.afficher_page_1()
-            # self.client_socket.close()
-    
     def rejoindre_file_attente(self):
         try:
             request = ["recherche partie"]
@@ -195,21 +131,10 @@ class UDPClient:
             else:
                 print("Réponse serveur : Non")
                 if self.keep_alive_active:
-                    # Planifier l'appel à la fonction toutes les 10 secondes
+                    # Planifier l'appel à la fonction toutes les 1 secondes
                     self.partie_trouvee_id = self.root.after(1000, self.partie_trouvee)
         except Exception as e:
             print(f"Erreur lors de la demande: {e}")
-        
-    def play(self, row, col):
-        try:
-            print(f"Je peux jouer ici {row}, {col}")
-            # Envoyer un message au serveur pour indiquer que le client est toujours actif
-            request = ["jouer ici", row, col]
-            request_json = json.dumps(request)
-            self.client_socket.sendto(request_json.encode(), (self.server_ip, self.server_port))
-
-        except Exception as e:
-            print(f"Erreur lors de la demande pour jouer à cette case: {e}")
     
     def maj_partie(self):
         try:
@@ -229,7 +154,11 @@ class UDPClient:
                             if gagnant == None:
                                 messagebox.showinfo("Fin de partie", "Match nul!")
                             else:
-                                messagebox.showinfo("Fin de partie", f"Le joueur {gagnant} a gagné!")
+                                if gagnant == self.pseudo_client:
+                                    text = f"Le joueur {gagnant} a gagné!\nVous avez gagné!"
+                                else:
+                                    text = f"Le joueur {gagnant} a gagné!\nVous avez perdu!"
+                                messagebox.showinfo("Fin de partie", text)
                             
                             self.btn_rejouer.config(state="enabled")
 
@@ -243,14 +172,98 @@ class UDPClient:
         
         if self.keep_alive_active:
             self.maj_partie_id = self.root.after(1000, self.maj_partie)
-        
+    
+    def update_chat(self):
+        try:
+            # Envoyer un message au serveur pour indiquer que le client est toujours actif
+            request = ["upd_chat", self.last_update_msg]
+            request_json = json.dumps(request)
+            
+            self.client_socket.sendto(request_json.encode(), (self.server_ip, self.server_port))
+            response, _ = self.client_socket.recvfrom(1024)
+            message_received = json.loads(response.decode())
+            if response:
+                if message_received[0] == "new_msg":
+                    for msg in message_received[1]:
+                        self.chat_display.configure(state=NORMAL)
+                        if self.pseudo.get() == msg[0]:
+                            txt = (f"{msg[0]} (You) : {msg[1]}\n")
+                        else:
+                            txt = (f"{msg[0]} : {msg[1]}\n")
+                        self.chat_display.insert(END, txt)
+                        self.chat_display.configure(state=DISABLED)
+                        self.chat_display.see(END)  # Faire défiler vers le bas
+                        self.last_update_msg = time.time()
+                
+                if message_received[0] == "ras":
+                    pass
 
+        except Exception as e:
+            print(f"Erreur lors de la mise à jour du chat : {e}")
+        
+        if self.keep_alive_active:
+            self.update_msg_id = self.root.after(1000, self.update_chat)
     
+    def send_msg(self):
+        if not self.verification_msg():
+            try:
+                request = ["chat", self.message2.get()]
+                request_json = json.dumps(request)
+
+                self.client_socket.sendto(request_json.encode(), (self.server_ip, self.server_port))
+                self.entry_msg.delete(0, 'end')
+
+            except Exception as e:
+                print(f"Erreur lors de la connexion au serveur : {e}")
+        else:
+            # self.entry_pseudo.delete(0, 'end')
+            messagebox.showwarning("Erreur", "Le message contient des caractères interdits.")
     
+    def verification_msg(self):
+        characters_interdis = r"[:\\;{}]"
+        if re.search(characters_interdis, self.message2.get()):
+            # self.pseudo_client = self.pseudo.get()
+            return True
+        else:
+            return False
+    
+    def play(self, row, col):
+        try:
+            print(f"Je peux jouer ici {row}, {col}")
+            # Envoyer un message au serveur pour indiquer que le client est toujours actif
+            request = ["jouer ici", row, col]
+            request_json = json.dumps(request)
+            self.client_socket.sendto(request_json.encode(), (self.server_ip, self.server_port))
+
+        except Exception as e:
+            print(f"Erreur lors de la demande pour jouer à cette case: {e}")
+    
+    def deconnexion(self):
+        message = ["deconnexion", self.pseudo.get()]
+        message_json = json.dumps(message)
+
+        self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
+        response, _ = self.client_socket.recvfrom(1024)
+        print("Dans connexion, réponse du serveur :", response.decode())
+        if response:
+            self.stop_requesting()
+            self.afficher_page_1()
+            # self.client_socket.close()
+
+    def stop_requesting(self):
+        # Arrêter la planification des appels récurrents
+        self.keep_alive_active = False
+        # Annuler l'appel planifié
+        if self.keep_alive_id:
+            self.root.after_cancel(self.keep_alive_id)
+            self.root.after_cancel(self.update_msg_id)
+            self.root.after_cancel(self.partie_trouvee_id)
+            self.keep_alive_id = None
+
     ######## Méthodes avec actions sur la fenetre tkinter
     def on_validate(self, P):
         # Limiter à 10 caractères
-        return len(P) <= 10
+        return len(P) <= 25
 
     def afficher_page_1(self):
         self.page2.pack_forget()
