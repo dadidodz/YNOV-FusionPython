@@ -17,8 +17,19 @@ class UDPClient:
         self.server_ip = server_ip
         self.server_port = server_port
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
         self.keep_alive_active = True
         self.keep_alive_id = None
+
+        self.keep_partie_trouvee_active = False
+        self.keep_partie_trouvee_id = None
+
+        self.keep_update_chat_active = False
+        self.keep_update_chat_id = None
+
+        self.keep_maj_partie_active = False
+        self.keep_maj_partie_id = None
+
         self.last_update_msg = time.time()
         self.last_update_partie = None
         self.pseudo_client = ""
@@ -50,7 +61,6 @@ class UDPClient:
                     self.keep_alive_active = True
                     self.afficher_page_2()
                     self.stay_connected()
-                    # self.update_chat()
 
             except Exception as e:
                 print(f"Erreur lors de la connexion au serveur : {e}")
@@ -61,7 +71,6 @@ class UDPClient:
     def verification_pseudo(self):
         characters_interdis = r"[^\w\s]"
         if len(self.pseudo.get()) < 3 or re.search(characters_interdis, self.pseudo.get()):
-            # self.pseudo_client = self.pseudo.get()
             return True
         else:
             return False
@@ -73,14 +82,13 @@ class UDPClient:
             request_json = json.dumps(request)
             
             self.client_socket.sendto(request_json.encode(), (self.server_ip, self.server_port))
-            print("Message de présence envoyé au serveur.")
+            print("Message anti-afk envoyé")
             response, _ = self.client_socket.recvfrom(1024)
-            print("Dans stay_connected, réponse du serveur :", response.decode())
+            print("Réponse serveur :", response.decode())
         except Exception as e:
             print(f"Erreur lors de l'envoi du message de présence : {e}")
         
         if self.keep_alive_active:
-            # Planifier l'appel à la fonction toutes les 10 secondes
             self.keep_alive_id = self.root.after(10000, self.stay_connected)
     
     def rejoindre_file_attente(self):
@@ -92,6 +100,7 @@ class UDPClient:
             response, _ = self.client_socket.recvfrom(1024)
             print("Dans rejoindre_file_attente, réponse du serveur :", response.decode())
             if response:
+                self.keep_partie_trouvee_active = True
                 self.partie_trouvee()
 
         except Exception as e:
@@ -99,13 +108,16 @@ class UDPClient:
     
     def quitter_file_attente(self):
         try:
-            self.root.after_cancel(self.partie_trouvee_id)
+            self.keep_partie_trouvee_active = False
+            self.root.after_cancel(self.keep_partie_trouvee_id)
             request = ["quitter file attente"]
             request_json = json.dumps(request)
 
             self.client_socket.sendto(request_json.encode(), (self.server_ip, self.server_port))
             response, _ = self.client_socket.recvfrom(1024)
             if response:
+                # self.keep_partie_trouvee_active = False
+                # self.root.after_cancel(self.keep_partie_trouvee_id)
                 self.activer_btn_jouer()
 
         except Exception as e:
@@ -127,15 +139,59 @@ class UDPClient:
                 self.activer_btn_jouer()
                 self.afficher_page_3()
                 self.last_update_partie = time.time()
+
+                self.keep_maj_partie_active = True
                 self.maj_partie()
-                self.update_chat() #############
+
+                self.keep_update_chat_active = True
+                self.update_chat()
+
+                self.keep_partie_trouvee_active = False
             else:
                 print("Réponse serveur : Non")
-                if self.keep_alive_active:
-                    # Planifier l'appel à la fonction toutes les 1 secondes
-                    self.partie_trouvee_id = self.root.after(1000, self.partie_trouvee)
+                if self.keep_partie_trouvee_active:
+                    self.keep_partie_trouvee_id = self.root.after(1000, self.partie_trouvee)
+
         except Exception as e:
             print(f"Erreur lors de la demande: {e}")
+    
+    def maj_partie(self):
+        try:
+            # Envoyer un message au serveur pour savoir si une action à été effectué dans la partie
+            request = ["maj partie", self.last_update_partie]
+            request_json = json.dumps(request)
+            
+            self.client_socket.sendto(request_json.encode(), (self.server_ip, self.server_port))
+            response, _ = self.client_socket.recvfrom(1024)
+            message_received = json.loads(response.decode())
+            if response:
+                if message_received[0] == "partie_lost":
+                    self.quitter()
+                if message_received[0] == "nouvelle action":
+                    for actions in message_received[1]:
+                        row, col, txt, etat_partie, gagnant = actions
+                        self.buttons[row][col].config(text=txt)
+                        if etat_partie:
+                            if gagnant == None:
+                                messagebox.showinfo("Fin de partie", "Match nul!")
+                            else:
+                                if gagnant == self.pseudo_client:
+                                    text = f"Le joueur {gagnant} a gagné!\nVous avez gagné!"
+                                else:
+                                    text = f"Le joueur {gagnant} a gagné!\nVous avez perdu!"
+                                messagebox.showinfo("Fin de partie", text)
+                            
+                            # self.keep_maj_partie_active = False
+                        self.last_update_partie = time.time()
+                
+                if message_received[0] == "zero nouvelle action":
+                    pass
+
+        except Exception as e:
+            print(f"Erreur lors de la mise à jour de la partie : {e}")
+        
+        if self.keep_maj_partie_active:
+            self.keep_maj_partie_id = self.root.after(1000, self.maj_partie)
     
     def update_chat(self):
         try:
@@ -164,9 +220,8 @@ class UDPClient:
 
         except Exception as e:
             print(f"Erreur lors de la mise à jour du chat : {e}")
-        
-        if self.keep_alive_active:
-            self.update_msg_id = self.root.after(1000, self.update_chat)
+        if self.keep_update_chat_active:
+            self.keep_update_chat_id = self.root.after(1000, self.update_chat)
     
     def send_msg(self):
         if not self.verification_msg():
@@ -180,13 +235,11 @@ class UDPClient:
             except Exception as e:
                 print(f"Erreur lors de la connexion au serveur : {e}")
         else:
-            # self.entry_pseudo.delete(0, 'end')
             messagebox.showwarning("Erreur", "Le message contient des caractères interdits.")
     
     def verification_msg(self):
         characters_interdis = r"[:\\;{}]"
         if re.search(characters_interdis, self.message2.get()):
-            # self.pseudo_client = self.pseudo.get()
             return True
         else:
             return False
@@ -203,14 +256,21 @@ class UDPClient:
             print(f"Erreur lors de la demande pour jouer à cette case: {e}")
         
     def quitter(self):
-            self.root.after_cancel(self.maj_partie_id)
-            self.root.after_cancel(self.update_msg_id)  
-            self.retour_page_2()   
+        self.keep_maj_partie_active = False
+        self.root.after_cancel(self.keep_maj_partie_id)
+
+        self.keep_update_chat_active = False
+        self.root.after_cancel(self.keep_update_chat_id)
+
+        self.retour_page_2()   
                
     def quitter_partie(self):
         try :
-            self.root.after_cancel(self.maj_partie_id)
-            self.root.after_cancel(self.update_msg_id)
+            self.keep_maj_partie_active = False
+            self.root.after_cancel(self.keep_maj_partie_id)
+
+            self.keep_update_chat_active = False
+            self.root.after_cancel(self.keep_update_chat_id)
 
             message = ["quitter partie"]
             message_json = json.dumps(message)
@@ -218,8 +278,11 @@ class UDPClient:
             self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
             response, _ = self.client_socket.recvfrom(1024)
             if response :
-                # self.root.after_cancel(self.maj_partie_id)
-                # self.root.after_cancel(self.update_msg_id)
+                # self.keep_maj_partie_active = False
+                # self.root.after_cancel(self.keep_maj_partie_id)
+
+                # self.keep_update_chat_active = False
+                # self.root.after_cancel(self.keep_update_chat_id)
                 print("Client quitte la partie", response.decode())
                 self.retour_page_2()
                 
@@ -235,67 +298,27 @@ class UDPClient:
             response, _ = self.client_socket.recvfrom(1024)
             print("Dans connexion, réponse du serveur :", response.decode())
             if response:
-                self.stop_requesting()
-                self.afficher_page_1()
-                # self.client_socket.close()
+                self.keep_alive_active = False
+                self.root.after_cancel(self.keep_alive_id)
+                self.keep_partie_trouvee_active = False
+
+                if self.keep_partie_trouvee_id:
+                    self.root.after_cancel(self.keep_partie_trouvee_id)
+                
+                # self.stop_requesting()
+                self.retour_page_1()
         
         except Exception as e:
             print(f"Erreur lors de la tentative de déconnexion : {e}")
 
-    def stop_requesting(self):
-        # Arrêter la planification des appels récurrents
-        self.keep_alive_active = False
-        # Annuler l'appel planifié
-        if self.keep_alive_id:
-            self.root.after_cancel(self.keep_alive_id)
-            # self.root.after_cancel(self.update_msg_id)
-            # self.root.after_cancel(self.partie_trouvee_id)
-            self.keep_alive_id = None
-
-    def maj_partie(self):
-        try:
-            # Envoyer un message au serveur pour savoir si une action à été effectué dans la partie
-            request = ["maj partie", self.last_update_partie]
-            request_json = json.dumps(request)
-            
-            self.client_socket.sendto(request_json.encode(), (self.server_ip, self.server_port))
-            response, _ = self.client_socket.recvfrom(1024)
-            message_received = json.loads(response.decode())
-            if response:
-                if message_received[0] == "partie_lost":
-                    self.quitter()
-                if message_received[0] == "nouvelle action":
-                    for actions in message_received[1]:
-                        row, col, txt, etat_partie, gagnant = actions
-                        self.buttons[row][col].config(text=txt)
-                        if etat_partie:
-                            if gagnant == None:
-                                messagebox.showinfo("Fin de partie", "Match nul!")
-                            else:
-                                if gagnant == self.pseudo_client:
-                                    text = f"Le joueur {gagnant} a gagné!\nVous avez gagné!"
-                                else:
-                                    text = f"Le joueur {gagnant} a gagné!\nVous avez perdu!"
-                                messagebox.showinfo("Fin de partie", text)
-                            
-                            # self.root.after_cancel(self.maj_partie_id)
-                        self.last_update_partie = time.time()
-                
-                if message_received[0] == "zero nouvelle action":
-                    pass
-
-        except Exception as e:
-            print(f"Erreur lors de la mise à jour de la partie : {e}")
-        
-        if self.keep_alive_active:
-            self.maj_partie_id = self.root.after(1000, self.maj_partie)
+    
 
     ######## Méthodes avec actions sur la fenetre tkinter
     def on_validate(self, P):
-        # Limiter à 10 caractères
         return len(P) <= 25
 
-    def afficher_page_1(self):
+    def retour_page_1(self):
+        self.activer_btn_jouer()
         self.page2.pack_forget()
         self.page1.pack()
         self.root.geometry("400x200")
@@ -312,6 +335,10 @@ class UDPClient:
         for i in range(3):
             for j in range(3):
                 self.buttons[i][j].config(text="")
+        
+        self.chat_display.configure(state=NORMAL)
+        self.chat_display.delete(1.0, END)
+        self.chat_display.configure(state=DISABLED)
     
     def afficher_page_3(self):
         self.page2.pack_forget()

@@ -18,6 +18,18 @@ class UDPServer:
         self.chat = Chat()
         self.running = True  # Condition d'arrêt
         print(f"Serveur UDP en écoute sur {self.SERVER_HOST}:{self.SERVER_PORT}")
+    
+    # def read_server_info_from_file(self, filename='config.txt'):
+    #     try:
+    #         with open(filename, 'r') as file:
+    #             lines = file.readlines()
+    #             for line in lines:
+    #                 if "Adresse IP du serveur" in line:
+    #                     self.server_ip = line.split(":")[-1].strip()
+    #                 elif "Port du serveur" in line:
+    #                     self.server_port = int(line.split(":")[-1].strip())
+    #     except Exception as e:
+    #         print(f"Erreur lors de la lecture du fichier de configuration : {e}")
 
     def receive_messages(self):
         while self.running:
@@ -42,12 +54,17 @@ class UDPServer:
                             self.parties[self.clients[client_address][3]].chat.add_message(self.clients[client_address][0], message_received[1])
 
                         case "upd_chat":
-                            if self.parties[self.clients[client_address][3]].chat.last_updated > message_received[1]: #self.chat.last_updated > message_received[1]
-                                messages = self.parties[self.clients[client_address][3]].chat.get_messages_after_time(message_received[1])
-                                # messages = self.chat.get_messages_after_time(message_received[1])
-                                reponse = ["new_msg", messages]
-                                reponse_json = json.dumps(reponse)
-                                self.server_socket.sendto(reponse_json.encode(), client_address)
+                            if self.clients[client_address][3] in self.parties:
+                                if self.parties[self.clients[client_address][3]].chat.last_updated > message_received[1]: #self.chat.last_updated > message_received[1]
+                                    messages = self.parties[self.clients[client_address][3]].chat.get_messages_after_time(message_received[1])
+                                    # messages = self.chat.get_messages_after_time(message_received[1])
+                                    reponse = ["new_msg", messages]
+                                    reponse_json = json.dumps(reponse)
+                                    self.server_socket.sendto(reponse_json.encode(), client_address)
+                                else:
+                                    reponse = ["ras"]
+                                    reponse_json = json.dumps(reponse)
+                                    self.server_socket.sendto(reponse_json.encode(), client_address)
                             else:
                                 reponse = ["ras"]
                                 reponse_json = json.dumps(reponse)
@@ -120,6 +137,7 @@ class UDPServer:
                 continue
             except Exception as e:
                 print(f"Erreur lors de la réception du message : {e}")
+                #UPDATE DU CHAT D'UNE PARTIE QUI N'EXISTE PLUS, DONC ERREUR
 
     def remove_inactive_clients(self):
         while self.running:
@@ -128,9 +146,15 @@ class UDPServer:
                 current_time = time.time()
                 inactive_clients = [address for address, values in self.clients.items() if current_time - values[4] > 15]
                 for address in inactive_clients:
-                    del self.clients[address]
+                    
                     if address in self.liste_attente:
                         self.liste_attente.remove(address)
+                    
+                    if self.clients[address][3] in self.parties :
+                        del self.parties[self.clients[address][3]]
+                    
+                    del self.clients[address]
+
                     print(f"Client {address} supprimé pour inactivité.")
                 time.sleep(1)
             except Exception as e:

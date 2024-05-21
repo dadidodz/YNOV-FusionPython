@@ -40,16 +40,6 @@ class MorpionServeur:
                     else:
                         self.historique_actions.append((row, col, self.joueurs[self.current_player], self.is_partie_finie, None, time.time()))
                         self.current_player = self.pseudo_j2 if self.current_player == self.pseudo_j1 else self.pseudo_j1
-
-                # if self.check_winner():
-                #     gagnant
-                #     messagebox.showinfo("Fin de partie", f"Le joueur {self.current_player} a gagné!")
-                #     self.reset_game()
-                # elif self.is_board_full():
-                #     messagebox.showinfo("Fin de partie", "Match nul!")
-                #     self.reset_game()
-                # else:
-                #     self.current_player = self.joueurs[addr_joueur2] if self.current_player == self.joueurs[addr_joueur1] else self.joueurs[addr_joueur1]
     
     def get_actions_after_time(self, timestamp):
         # Récupérer les messages envoyés après le temps donné
