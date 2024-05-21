@@ -124,6 +124,7 @@ class UDPClient:
 
             if message_received[0] == "Oui":
                 print("Réponse serveur : Oui")
+                self.activer_btn_jouer()
                 self.afficher_page_3()
                 self.last_update_partie = time.time()
                 self.maj_partie()
@@ -135,43 +136,6 @@ class UDPClient:
                     self.partie_trouvee_id = self.root.after(1000, self.partie_trouvee)
         except Exception as e:
             print(f"Erreur lors de la demande: {e}")
-    
-    def maj_partie(self):
-        try:
-            # Envoyer un message au serveur pour savoir si une action à été effectué dans la partie
-            request = ["maj partie", self.last_update_partie]
-            request_json = json.dumps(request)
-            
-            self.client_socket.sendto(request_json.encode(), (self.server_ip, self.server_port))
-            response, _ = self.client_socket.recvfrom(1024)
-            message_received = json.loads(response.decode())
-            if response:
-                if message_received[0] == "nouvelle action":
-                    for actions in message_received[1]:
-                        row, col, txt, etat_partie, gagnant = actions
-                        self.buttons[row][col].config(text=txt)
-                        if etat_partie:
-                            if gagnant == None:
-                                messagebox.showinfo("Fin de partie", "Match nul!")
-                            else:
-                                if gagnant == self.pseudo_client:
-                                    text = f"Le joueur {gagnant} a gagné!\nVous avez gagné!"
-                                else:
-                                    text = f"Le joueur {gagnant} a gagné!\nVous avez perdu!"
-                                messagebox.showinfo("Fin de partie", text)
-                            
-                            self.btn_rejouer.config(state="enabled")
-
-                        self.last_update_partie = time.time()
-                
-                if message_received[0] == "zero nouvelle action":
-                    pass
-
-        except Exception as e:
-            print(f"Erreur lors de la mise à jour de la partie : {e}")
-        
-        if self.keep_alive_active:
-            self.maj_partie_id = self.root.after(1000, self.maj_partie)
     
     def update_chat(self):
         try:
@@ -237,18 +201,46 @@ class UDPClient:
 
         except Exception as e:
             print(f"Erreur lors de la demande pour jouer à cette case: {e}")
+        
+    def quitter(self):
+            self.root.after_cancel(self.maj_partie_id)
+            self.root.after_cancel(self.update_msg_id)  
+            self.retour_page_2()   
+               
+    def quitter_partie(self):
+        try :
+            self.root.after_cancel(self.maj_partie_id)
+            self.root.after_cancel(self.update_msg_id)
+
+            message = ["quitter partie"]
+            message_json = json.dumps(message)
+
+            self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
+            response, _ = self.client_socket.recvfrom(1024)
+            if response :
+                # self.root.after_cancel(self.maj_partie_id)
+                # self.root.after_cancel(self.update_msg_id)
+                print("Client quitte la partie", response.decode())
+                self.retour_page_2()
+                
+        except Exception as e:
+            print(f"Erreur lors de la tentative de quitter la partie : {e}")
     
     def deconnexion(self):
-        message = ["deconnexion", self.pseudo.get()]
-        message_json = json.dumps(message)
+        try :
+            message = ["deconnexion", self.pseudo.get()]
+            message_json = json.dumps(message)
 
-        self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
-        response, _ = self.client_socket.recvfrom(1024)
-        print("Dans connexion, réponse du serveur :", response.decode())
-        if response:
-            self.stop_requesting()
-            self.afficher_page_1()
-            # self.client_socket.close()
+            self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
+            response, _ = self.client_socket.recvfrom(1024)
+            print("Dans connexion, réponse du serveur :", response.decode())
+            if response:
+                self.stop_requesting()
+                self.afficher_page_1()
+                # self.client_socket.close()
+        
+        except Exception as e:
+            print(f"Erreur lors de la tentative de déconnexion : {e}")
 
     def stop_requesting(self):
         # Arrêter la planification des appels récurrents
@@ -256,9 +248,47 @@ class UDPClient:
         # Annuler l'appel planifié
         if self.keep_alive_id:
             self.root.after_cancel(self.keep_alive_id)
-            self.root.after_cancel(self.update_msg_id)
-            self.root.after_cancel(self.partie_trouvee_id)
+            # self.root.after_cancel(self.update_msg_id)
+            # self.root.after_cancel(self.partie_trouvee_id)
             self.keep_alive_id = None
+
+    def maj_partie(self):
+        try:
+            # Envoyer un message au serveur pour savoir si une action à été effectué dans la partie
+            request = ["maj partie", self.last_update_partie]
+            request_json = json.dumps(request)
+            
+            self.client_socket.sendto(request_json.encode(), (self.server_ip, self.server_port))
+            response, _ = self.client_socket.recvfrom(1024)
+            message_received = json.loads(response.decode())
+            if response:
+                if message_received[0] == "partie_lost":
+                    self.quitter()
+                if message_received[0] == "nouvelle action":
+                    for actions in message_received[1]:
+                        row, col, txt, etat_partie, gagnant = actions
+                        self.buttons[row][col].config(text=txt)
+                        if etat_partie:
+                            if gagnant == None:
+                                messagebox.showinfo("Fin de partie", "Match nul!")
+                            else:
+                                if gagnant == self.pseudo_client:
+                                    text = f"Le joueur {gagnant} a gagné!\nVous avez gagné!"
+                                else:
+                                    text = f"Le joueur {gagnant} a gagné!\nVous avez perdu!"
+                                messagebox.showinfo("Fin de partie", text)
+                            
+                            # self.root.after_cancel(self.maj_partie_id)
+                        self.last_update_partie = time.time()
+                
+                if message_received[0] == "zero nouvelle action":
+                    pass
+
+        except Exception as e:
+            print(f"Erreur lors de la mise à jour de la partie : {e}")
+        
+        if self.keep_alive_active:
+            self.maj_partie_id = self.root.after(1000, self.maj_partie)
 
     ######## Méthodes avec actions sur la fenetre tkinter
     def on_validate(self, P):
@@ -279,6 +309,9 @@ class UDPClient:
         self.page3.pack_forget()
         self.page2.pack()
         self.root.geometry("400x300")
+        for i in range(3):
+            for j in range(3):
+                self.buttons[i][j].config(text="")
     
     def afficher_page_3(self):
         self.page2.pack_forget()
@@ -365,7 +398,7 @@ class UDPClient:
         #----------Création et config widgets
         self.btn_jouer = Button(self.page2, text="Trouver une partie", command=lambda:[self.rejoindre_file_attente(), self.desactiver_btn_jouer()])
         self.btn_cancel_jouer = Button(self.page2, text="Quitter la file d'attente", state="disabled", command=lambda:[self.quitter_file_attente()])
-        self.btn_retour = Button(self.page2, text="Déconnexion", command=lambda:[self.deconnexion()])
+        self.btn_deconnexion = Button(self.page2, text="Déconnexion", command=lambda:[self.deconnexion()])
         
         #----------Pack widget
         Label(self.page2, text="Page 2").pack()
@@ -373,7 +406,7 @@ class UDPClient:
         self.label_pseudo.pack()
         self.btn_jouer.pack()
         self.btn_cancel_jouer.pack()
-        self.btn_retour.pack()
+        self.btn_deconnexion.pack()
 
 
         #-----------PAGE 3--------------
@@ -385,15 +418,15 @@ class UDPClient:
         self.validate_cmd = self.page3.register(self.on_validate)
         self.entry_msg = Entry(self.page3, textvariable=self.message2, validate="key", validatecommand=(self.validate_cmd, "%P"))
         self.btn_envoyer = Button(self.page3, text="Envoyer", command=lambda:[self.send_msg()])
-        self.btn_retour = Button(self.page3, text="Retour", command=lambda:[]) #self.retour_page_2()
-        self.btn_rejouer = Button(self.page3, text="Rejouer", state="disabled", command=lambda:[])
+        self.btn_quitter_partie = Button(self.page3, text="Quitter la partie", command=self.quitter_partie) #self.retour_page_2()
+        # self.btn_rejouer = Button(self.page3, text="Rejouer", state="disabled", command=lambda:[])
 
         #----------Pack widget
         self.chat_display.grid(row=3, column=0, columnspan=3, sticky="ew")
         self.entry_msg.grid(row=4, column=0, columnspan=2, sticky="ew")
         self.btn_envoyer.grid(row=4, column=2, sticky="ew")
-        self.btn_retour.grid(row=5, column=0, sticky="w")
-        self.btn_rejouer.grid(row=5, column=1, sticky="w")
+        self.btn_quitter_partie.grid(row=5, column=0, sticky="w")
+        # self.btn_rejouer.grid(row=5, column=1, sticky="w")
 
 
 

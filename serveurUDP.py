@@ -16,14 +16,16 @@ class UDPServer:
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.server_socket.bind((self.SERVER_HOST, self.SERVER_PORT))
         self.chat = Chat()
+        self.running = True  # Condition d'arrêt
         print(f"Serveur UDP en écoute sur {self.SERVER_HOST}:{self.SERVER_PORT}")
 
     def receive_messages(self):
-        while True:
+        while self.running:
             try:
+                self.server_socket.settimeout(1) 
                 data, client_address = self.server_socket.recvfrom(1024)
-                message_received = json.loads(data.decode())
                 if data:
+                    message_received = json.loads(data.decode())
                     match message_received[0]:
                         case "alive":
                             self.clients[client_address][4] = time.time()
@@ -77,19 +79,34 @@ class UDPServer:
                                 self.server_socket.sendto(reponse_json.encode(), client_address)
                         
                         case "maj partie":
-                            if self.parties[self.clients[client_address][3]].temps_derniere_action > message_received[1]:
-                                actions = self.parties[self.clients[client_address][3]].get_actions_after_time(message_received[1])
-                                reponse = ["nouvelle action", actions]
+                            if self.clients[client_address][3] not in self.parties:
+                                reponse = ["partie_lost"]
                                 reponse_json = json.dumps(reponse)
                                 self.server_socket.sendto(reponse_json.encode(), client_address)
+                                self.clients[client_address][3] = None
                             else:
-                                reponse = ["zero nouvelle action"]
-                                reponse_json = json.dumps(reponse)
-                                self.server_socket.sendto(reponse_json.encode(), client_address)
+                                if self.parties[self.clients[client_address][3]].temps_derniere_action > message_received[1]:
+                                    actions = self.parties[self.clients[client_address][3]].get_actions_after_time(message_received[1])
+                                    reponse = ["nouvelle action", actions]
+                                    reponse_json = json.dumps(reponse)
+                                    self.server_socket.sendto(reponse_json.encode(), client_address)
+                                else:
+                                    reponse = ["zero nouvelle action"]
+                                    reponse_json = json.dumps(reponse)
+                                    self.server_socket.sendto(reponse_json.encode(), client_address)
                         
                         case "jouer ici":
                             self.parties[self.clients[client_address][3]].jouer(message_received[1], message_received[2], self.clients[client_address][0]) # row, col, addr_joueur,)
                         
+                        case "quitter partie":
+                            reponse = ["partie quittee"]
+                            reponse_json = json.dumps(reponse)
+                            self.server_socket.sendto(reponse_json.encode(), client_address)
+                            print(f"Nombre de parties : {len(self.parties)}")
+                            del self.parties[self.clients[client_address][3]]
+                            self.clients[client_address][3] = None
+                            print(f"Nombre de parties : {len(self.parties)}")
+
                         case "deconnexion":
                             del self.clients[client_address]
                             if client_address in self.liste_attente:
@@ -99,12 +116,13 @@ class UDPServer:
                         
                         case _:
                             print(f"Message {message_received[0]} non géré ")
-
+            except socket.timeout:
+                continue
             except Exception as e:
                 print(f"Erreur lors de la réception du message : {e}")
 
     def remove_inactive_clients(self):
-        while True:
+        while self.running:
             try:
                 # Supprimer les clients qui n'ont pas envoyé de message depuis plus de 30 secondes
                 current_time = time.time()
@@ -119,7 +137,7 @@ class UDPServer:
                 print(f"Erreur lors de la suppression des clients inactifs : {e}")
     
     def maj_file_dattente(self):
-        while True:
+        while self.running:
             for adresse_joueur, values in self.clients.items():
                 if values[2] == 1:
                     if not adresse_joueur in self.liste_attente:
@@ -128,7 +146,7 @@ class UDPServer:
                 ## Inutile si on retire correctement les joueurs quand ils ne recherchent plus une partie
                 ## ou bien s'ils sont déjà dans une partie
                 else:
-                    print("Retrait de la file d'attente")
+                    # print("Retrait de la file d'attente")
                     if adresse_joueur in self.liste_attente:
                         self.liste_attente.remove(adresse_joueur)
                         print(f"Joueur {self.clients[adresse_joueur][0]} a été retiré de la file d'attente")
@@ -162,17 +180,27 @@ class UDPServer:
                     print("Aucune partie créée")
 
     def start_server(self):
-        # Démarrer un thread pour recevoir les messages des clients
-        threading.Thread(target=self.receive_messages).start()
-        # Démarrer un thread pour supprimer les clients inactifs
-        threading.Thread(target=self.remove_inactive_clients).start()
-        threading.Thread(target=self.maj_file_dattente).start()
-        # Garder le programme en cours d'exécution
-        while True:
-            time.sleep(1)
+        try:
+            # Démarrer un thread pour recevoir les messages des clients
+            threading.Thread(target=self.receive_messages).start()
+            # Démarrer un thread pour supprimer les clients inactifs
+            threading.Thread(target=self.remove_inactive_clients).start()
+            threading.Thread(target=self.maj_file_dattente).start()
+            # Garder le programme en cours d'exécution
+            while self.running:
+                time.sleep(1)
+        
+        except KeyboardInterrupt:
+            self.stop_server()
+    
+    def stop_server(self):
+        self.running = False
+        self.server_socket.close()
+        print("Serveur arrêté")
+
 
 # Utilisation du serveur
 if __name__ == "__main__":
-    server = UDPServer('10.34.0.248', 12345)
-    # server = UDPServer('192.168.1.45', 12345)
+    # server = UDPServer('10.34.0.248', 12345)
+    server = UDPServer('192.168.1.45', 12345)
     server.start_server()
