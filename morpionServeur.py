@@ -9,8 +9,6 @@ class MorpionServeur:
         self.id_partie = id_partie
         self.temps_derniere_action = time.time()
         self.chat = Chat()
-        # self.addr_joueur_1 = addr_joueur1
-        # self.addr_joueur_2 = addr_joueur2
         self.pseudo_j1 = pseudo_j1
         self.pseudo_j2 = pseudo_j2
         self.joueurs = {}
@@ -21,6 +19,7 @@ class MorpionServeur:
         self.board = [[" " for _ in range(3)] for _ in range(3)]
         self.is_partie_finie = False
         self.gagnant = None
+        self.perdant = None
 
     def jouer(self, row, col, pseudo_joueur):
         if not self.is_partie_finie:
@@ -33,17 +32,22 @@ class MorpionServeur:
                     if self.check_winner():
                         self.is_partie_finie = True
                         self.gagnant = self.current_player
-                        self.historique_actions.append((row, col, self.joueurs[self.current_player], self.is_partie_finie, self.gagnant, time.time()))
+                        if self.current_player == self.pseudo_j1:
+                            self.perdant = self.pseudo_j2
+                        else:
+                            self.perdant = self.pseudo_j1
+
+                        self.historique_actions.append((row, col, self.joueurs[self.current_player], self.is_partie_finie, self.gagnant, self.perdant ,time.time()))
                     elif self.is_board_full():
                         self.is_partie_finie = True
-                        self.historique_actions.append((row, col, self.joueurs[self.current_player], self.is_partie_finie, self.gagnant, time.time()))
+                        self.historique_actions.append((row, col, self.joueurs[self.current_player], self.is_partie_finie, self.gagnant, self.perdant ,time.time()))
                     else:
-                        self.historique_actions.append((row, col, self.joueurs[self.current_player], self.is_partie_finie, None, time.time()))
+                        self.historique_actions.append((row, col, self.joueurs[self.current_player], self.is_partie_finie, None, None ,time.time()))
                         self.current_player = self.pseudo_j2 if self.current_player == self.pseudo_j1 else self.pseudo_j1
     
     def get_actions_after_time(self, timestamp):
         # Récupérer les messages envoyés après le temps donné
-        action_after_time = [(row, col, txt, etat_partie, gagnant) for row, col, txt, etat_partie, gagnant, action_time in self.historique_actions if action_time > timestamp]
+        action_after_time = [(row, col, txt, etat_partie, gagnant, perdant) for row, col, txt, etat_partie, gagnant, perdant, action_time in self.historique_actions if action_time > timestamp]
         return action_after_time
 
 

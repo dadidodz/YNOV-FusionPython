@@ -169,7 +169,7 @@ class UDPClient:
                     self.quitter()
                 if message_received[0] == "nouvelle action":
                     for actions in message_received[1]:
-                        row, col, txt, etat_partie, gagnant = actions
+                        row, col, txt, etat_partie, gagnant, perdant = actions
                         self.buttons[row][col].config(text=txt)
                         if etat_partie:
                             if gagnant == None:
@@ -207,10 +207,13 @@ class UDPClient:
                     for msg in message_received[1]:
                         self.chat_display.configure(state=NORMAL)
                         if self.pseudo.get() == msg[0]:
-                            txt = (f"{msg[0]} (You) : {msg[1]}\n")
+                            txt = (f"{msg[0]} (Vous) : {msg[1]}\n")
                         else:
                             txt = (f"{msg[0]} : {msg[1]}\n")
+                        start_index = f"{END}-{len(txt)+1}c"
                         self.chat_display.insert(END, txt)
+                        self.chat_display.tag_configure('default', foreground='black', font=('Helvetica', 10))
+                        self.chat_display.tag_add('default', start_index, END)
                         self.chat_display.configure(state=DISABLED)
                         self.chat_display.see(END)  # Faire défiler vers le bas
                         self.last_update_msg = time.time()
@@ -266,11 +269,11 @@ class UDPClient:
                
     def quitter_partie(self):
         try :
-            self.keep_maj_partie_active = False
-            self.root.after_cancel(self.keep_maj_partie_id)
+            # self.keep_maj_partie_active = False
+            # self.root.after_cancel(self.keep_maj_partie_id)
 
-            self.keep_update_chat_active = False
-            self.root.after_cancel(self.keep_update_chat_id)
+            # self.keep_update_chat_active = False
+            # self.root.after_cancel(self.keep_update_chat_id)
 
             message = ["quitter partie"]
             message_json = json.dumps(message)
@@ -278,11 +281,11 @@ class UDPClient:
             self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
             response, _ = self.client_socket.recvfrom(1024)
             if response :
-                # self.keep_maj_partie_active = False
-                # self.root.after_cancel(self.keep_maj_partie_id)
+                self.keep_maj_partie_active = False
+                self.root.after_cancel(self.keep_maj_partie_id)
 
-                # self.keep_update_chat_active = False
-                # self.root.after_cancel(self.keep_update_chat_id)
+                self.keep_update_chat_active = False
+                self.root.after_cancel(self.keep_update_chat_id)
                 print("Client quitte la partie", response.decode())
                 self.retour_page_2()
                 
@@ -310,8 +313,6 @@ class UDPClient:
         
         except Exception as e:
             print(f"Erreur lors de la tentative de déconnexion : {e}")
-
-    
 
     ######## Méthodes avec actions sur la fenetre tkinter
     def on_validate(self, P):
@@ -344,6 +345,17 @@ class UDPClient:
         self.page2.pack_forget()
         self.page3.pack()
         self.root.geometry("600x600")
+        self.initialiser_chat()
+    
+    def initialiser_chat(self):
+        self.chat_display.configure(state=NORMAL)
+        txt = "Espace chat, veuillez rester respectueux envers votre adversaire sous peine de sanction\n"
+        self.chat_display.insert(END, txt)
+        start_index = f"{END}-{len(txt)+1}c"
+        self.chat_display.tag_configure('gris_italique', foreground='grey', font=('Helvetica', 10, 'italic'))
+        self.chat_display.tag_add('gris_italique', start_index, END)
+        
+        self.chat_display.configure(state=DISABLED)
     
     def modif_pseudo(self):
         self.pseudo_client = self.pseudo.get()
@@ -448,11 +460,16 @@ class UDPClient:
         self.btn_quitter_partie = Button(self.page3, text="Quitter la partie", command=self.quitter_partie) #self.retour_page_2()
         # self.btn_rejouer = Button(self.page3, text="Rejouer", state="disabled", command=lambda:[])
 
-        #----------Pack widget
-        self.chat_display.grid(row=3, column=0, columnspan=3, sticky="ew")
-        self.entry_msg.grid(row=4, column=0, columnspan=2, sticky="ew")
-        self.btn_envoyer.grid(row=4, column=2, sticky="ew")
-        self.btn_quitter_partie.grid(row=5, column=0, sticky="w")
+        #----------Grid widget
+        Label(self.page3, text="Page 3").grid(row=0, column=1)
+        # self.label_pseudo = Label(self.page2, text="")
+        # self.label_pseudo.pack()
+
+        self.chat_display.grid(row=4, column=0, columnspan=3, sticky="ew")
+        Label(self.page3, text="Connecté").grid(row=5, column=0, columnspan=3, sticky="ew")
+        self.entry_msg.grid(row=6, column=0, columnspan=2, sticky="ew")
+        self.btn_envoyer.grid(row=6, column=2, sticky="ew")
+        self.btn_quitter_partie.grid(row=7, column=0, sticky="w")
         # self.btn_rejouer.grid(row=5, column=1, sticky="w")
 
 
@@ -465,7 +482,7 @@ class UDPClient:
         for i in range(3):
             for j in range(3):
                 button = Button(self.page3, text="", style="Case.TButton", command=lambda row=i, col=j: self.play(row, col))
-                button.grid(row=i, column=j, ipady=10, ipadx=10)
+                button.grid(row=i+1, column=j, ipady=10, ipadx=10)
                 self.buttons[i][j] = button
 
 

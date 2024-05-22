@@ -104,6 +104,18 @@ class UDPServer:
                             else:
                                 if self.parties[self.clients[client_address][3]].temps_derniere_action > message_received[1]:
                                     actions = self.parties[self.clients[client_address][3]].get_actions_after_time(message_received[1])
+                                    print(actions)
+                                    if actions[len(actions)-1][3] is True:
+                                        # print(f"Le joueur {actions[len(actions)-1][4]} gagne la partie, il gagne du mmr")
+
+                                        if self.clients[client_address][0] == actions[len(actions)-1][4]:
+                                            self.clients[client_address][1] = self.clients[client_address][1] + 5
+                                            print(f"MMR de {self.clients[client_address][0]} : {self.clients[client_address][1]}")
+                                        
+                                        if self.clients[client_address][0] == actions[len(actions)-1][5]:
+                                            self.clients[client_address][1] = self.clients[client_address][1] - 5
+                                            print(f"MMR de {self.clients[client_address][0]} : {self.clients[client_address][1]}")
+
                                     reponse = ["nouvelle action", actions]
                                     reponse_json = json.dumps(reponse)
                                     self.server_socket.sendto(reponse_json.encode(), client_address)
@@ -185,7 +197,8 @@ class UDPServer:
             # Parcourir à nouveau les clients pour comparer les MMR avec les autres clients
             for other_client_address in self.liste_attente:
                 # Vérifier si les adresses sont différentes et si les MMR sont égaux
-                if client_address != other_client_address and self.clients[client_address][0] != self.clients[other_client_address][0] and self.clients[client_address][1] == self.clients[other_client_address][1]:
+                diff_mmr = abs(self.clients[client_address][1] - self.clients[other_client_address][1])
+                if client_address != other_client_address and self.clients[client_address][0] != self.clients[other_client_address][0] and diff_mmr < 51: #self.clients[client_address][1] == self.clients[other_client_address][1]
                     # Ajouter les adresses des joueurs ayant le même MMR à la liste temporaire
                     id_partie = random.randint(999, 10000)
                     # partie = MorpionServeur(id_partie, client_address, other_client_address, self.clients[client_address][0], self.clients[other_client_address][0])
@@ -225,6 +238,6 @@ class UDPServer:
 
 # Utilisation du serveur
 if __name__ == "__main__":
-    # server = UDPServer('10.34.0.248', 12345)
-    server = UDPServer('192.168.1.45', 12345)
+    server = UDPServer('10.34.0.248', 12345)
+    # server = UDPServer('192.168.1.45', 12345)
     server.start_server()
