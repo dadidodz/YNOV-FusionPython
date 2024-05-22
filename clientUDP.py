@@ -470,7 +470,6 @@ class UDPClient:
         self.entry_msg.grid(row=6, column=0, columnspan=2, sticky="ew")
         self.btn_envoyer.grid(row=6, column=2, sticky="ew")
         self.btn_quitter_partie.grid(row=7, column=0, sticky="w")
-        # self.btn_rejouer.grid(row=5, column=1, sticky="w")
 
 
 

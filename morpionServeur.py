@@ -50,7 +50,6 @@ class MorpionServeur:
         action_after_time = [(row, col, txt, etat_partie, gagnant, perdant) for row, col, txt, etat_partie, gagnant, perdant, action_time in self.historique_actions if action_time > timestamp]
         return action_after_time
 
-
     def check_winner(self):
         for i in range(3):
             if self.board[i][0] == self.board[i][1] == self.board[i][2] != " ":
@@ -68,18 +67,3 @@ class MorpionServeur:
             if " " in row:
                 return False
         return True
-
-    def reset_game(self):
-        self.board = [[" " for _ in range(3)] for _ in range(3)]
-        for i in range(3):
-            for j in range(3):
-                self.buttons[i][j].config(text="")
-        self.current_player = "X"
-
-#     def run(self):
-#         self.window.mainloop()
-
-# # Utilisation du jeu de Morpion
-# if __name__ == "__main__":
-#     morpion = Morpion()
-#     morpion.run()
