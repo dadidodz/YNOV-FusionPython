@@ -6,6 +6,10 @@ import random
 from chat import Chat
 from morpionServeur import MorpionServeur
 
+# A ajouter :   date à laquelle les joueurs rejoingnent la file d'attente
+#               information sur à qui est le tour (dans le chat par exemple)
+#               lien avec la base de données
+
 class UDPServer:
     def __init__(self, host, port):
         self.SERVER_HOST = host

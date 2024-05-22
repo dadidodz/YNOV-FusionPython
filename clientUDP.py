@@ -1,5 +1,4 @@
 # UTILISER CE CLIENT
-
 import socket
 from tkinter import *
 from tkinter import messagebox
