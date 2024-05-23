@@ -9,11 +9,13 @@ from morpionServeur import MorpionServeur
 # A ajouter :   date à laquelle les joueurs rejoingnent la file d'attente
 #               information sur à qui est le tour (dans le chat par exemple)
 #               lien avec la base de données
+# ip ynov dorian = '10.34.0.248'
+# ip dorian apaprt = '192.168.1.45'
 
 class UDPServer:
-    def __init__(self, host, port):
-        self.server_ip = host
-        self.server_port = port
+    def __init__(self, server_ip=None, server_port=None):
+        self.server_ip = server_ip
+        self.server_port = server_port
         self.clients = {} # Exemple format : ('192.168.1.100', 12345): [dorian, 1000, 0, None, 1647831000.0]
         self.queue = []
         self.parties = {} # Exemple format : 1: Partie
@@ -23,17 +25,17 @@ class UDPServer:
         self.is_running = True  # Condition d'arrêt
         print(f"Serveur UDP en écoute sur {self.server_ip}:{self.server_port}")
     
-    # def read_server_info_from_file(self, filename='config.txt'):
-    #     try:
-    #         with open(filename, 'r') as file:
-    #             lines = file.readlines()
-    #             for line in lines:
-    #                 if "Adresse IP du serveur" in line:
-    #                     self.server_ip = line.split(":")[-1].strip()
-    #                 elif "Port du serveur" in line:
-    #                     self.server_port = int(line.split(":")[-1].strip())
-    #     except Exception as e:
-    #         print(f"Erreur lors de la lecture du fichier de configuration : {e}")
+    def read_server_info_from_file(self, filename='config.txt'):
+        try:
+            with open(filename, 'r') as file:
+                lines = file.readlines()
+                for line in lines:
+                    if "Adresse IP du serveur" in line:
+                        self.server_ip = line.split(":")[-1].strip()
+                    elif "Port du serveur" in line:
+                        self.server_port = int(line.split(":")[-1].strip())
+        except Exception as e:
+            print(f"Erreur lors de la lecture du fichier de configuration : {e}")
 
     def receive_messages(self):
         while self.is_running:
@@ -153,7 +155,6 @@ class UDPServer:
                 continue
             except Exception as e:
                 print(f"Erreur lors de la réception du message : {e}")
-                #UPDATE DU CHAT D'UNE PARTIE QUI N'EXISTE PLUS, DONC ERREUR
 
     def remove_inactive_clients(self):
         while self.is_running:
@@ -221,6 +222,7 @@ class UDPServer:
                     print("Aucune partie créée")
 
     def start_server(self):
+        self.read_server_info_from_file()
         try:
             # Démarrer un thread pour recevoir les messages des clients
             threading.Thread(target=self.receive_messages).start()

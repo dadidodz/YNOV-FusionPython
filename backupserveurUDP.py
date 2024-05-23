@@ -9,34 +9,36 @@ from morpionServeur import MorpionServeur
 # A ajouter :   date à laquelle les joueurs rejoingnent la file d'attente
 #               information sur à qui est le tour (dans le chat par exemple)
 #               lien avec la base de données
+# ip ynov dorian = '10.34.0.248'
+# ip dorian apaprt = '192.168.1.45'
 
 class UDPServer:
-    def __init__(self, host, port):
-        self.SERVER_HOST = host
-        self.SERVER_PORT = port
+    def __init__(self, server_ip=None, server_port=None):
+        self.server_ip = server_ip
+        self.server_port = server_port
         self.clients = {} # Exemple format : ('192.168.1.100', 12345): [dorian, 1000, 0, None, 1647831000.0]
-        self.liste_attente = []
+        self.queue = []
         self.parties = {} # Exemple format : 1: Partie
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.server_socket.bind((self.SERVER_HOST, self.SERVER_PORT))
+        self.server_socket.bind((self.server_ip, self.server_port))
         self.chat = Chat()
-        self.running = True  # Condition d'arrêt
-        print(f"Serveur UDP en écoute sur {self.SERVER_HOST}:{self.SERVER_PORT}")
+        self.is_running = True  # Condition d'arrêt
+        print(f"Serveur UDP en écoute sur {self.server_ip}:{self.server_port}")
     
-    # def read_server_info_from_file(self, filename='config.txt'):
-    #     try:
-    #         with open(filename, 'r') as file:
-    #             lines = file.readlines()
-    #             for line in lines:
-    #                 if "Adresse IP du serveur" in line:
-    #                     self.server_ip = line.split(":")[-1].strip()
-    #                 elif "Port du serveur" in line:
-    #                     self.server_port = int(line.split(":")[-1].strip())
-    #     except Exception as e:
-    #         print(f"Erreur lors de la lecture du fichier de configuration : {e}")
+    def read_server_info_from_file(self, filename='config.txt'):
+        try:
+            with open(filename, 'r') as file:
+                lines = file.readlines()
+                for line in lines:
+                    if "Adresse IP du serveur" in line:
+                        self.server_ip = line.split(":")[-1].strip()
+                    elif "Port du serveur" in line:
+                        self.server_port = int(line.split(":")[-1].strip())
+        except Exception as e:
+            print(f"Erreur lors de la lecture du fichier de configuration : {e}")
 
     def receive_messages(self):
-        while self.running:
+        while self.is_running:
             try:
                 self.server_socket.settimeout(1) 
                 message_json, client_address = self.server_socket.recvfrom(1024)
@@ -48,7 +50,7 @@ class UDPServer:
                             self.server_socket.sendto("Vous êtes toujours connecté".encode('utf-8'), client_address)
                             print(f"Message reçu de {client_address}: {message_json.decode()}")
                         
-                        case "connexion":
+                        case "connection":
                             infos = [message[1], 1000, 0, None, time.time()]
                             self.clients[client_address] = infos
                             self.server_socket.sendto(f"{self.clients[client_address][0]}".encode('utf-8'), client_address)
@@ -82,8 +84,8 @@ class UDPServer:
                         
                         case "quitter file attente":
                             self.clients[client_address][2] = 0
-                            if client_address in self.liste_attente:
-                                self.liste_attente.remove(client_address)
+                            if client_address in self.queue:
+                                self.queue.remove(client_address)
                             print(f"Retrait du joueur {self.clients[client_address][0]} de la file d'attente ({self.clients[client_address]})")
                             reponse = ["retrait file attente"]
                             reponse_json = json.dumps(reponse)
@@ -142,8 +144,8 @@ class UDPServer:
 
                         case "deconnexion":
                             del self.clients[client_address]
-                            if client_address in self.liste_attente:
-                                self.liste_attente.remove(client_address)
+                            if client_address in self.queue:
+                                self.queue.remove(client_address)
                             self.server_socket.sendto(f"Pseudo : {message[1]}, vous êtes déconnecté.".encode('utf-8'), client_address)
                             print(f"Client {client_address} supprimé pour déconnexion.")
                         
@@ -153,18 +155,17 @@ class UDPServer:
                 continue
             except Exception as e:
                 print(f"Erreur lors de la réception du message : {e}")
-                #UPDATE DU CHAT D'UNE PARTIE QUI N'EXISTE PLUS, DONC ERREUR
 
     def remove_inactive_clients(self):
-        while self.running:
+        while self.is_running:
             try:
                 # Supprimer les clients qui n'ont pas envoyé de message depuis plus de 30 secondes
                 current_time = time.time()
                 inactive_clients = [address for address, values in self.clients.items() if current_time - values[4] > 15]
                 for address in inactive_clients:
                     
-                    if address in self.liste_attente:
-                        self.liste_attente.remove(address)
+                    if address in self.queue:
+                        self.queue.remove(address)
                     
                     if self.clients[address][3] in self.parties :
                         del self.parties[self.clients[address][3]]
@@ -176,30 +177,30 @@ class UDPServer:
             except Exception as e:
                 print(f"Erreur lors de la suppression des clients inactifs : {e}")
     
-    def maj_file_dattente(self):
-        while self.running:
-            for adresse_joueur, values in self.clients.items():
+    def update_queue(self):
+        while self.is_running:
+            for client_address, values in self.clients.items(): #client_address = key; values = values
                 if values[2] == 1:
-                    if not adresse_joueur in self.liste_attente:
-                        self.liste_attente.append(adresse_joueur)
-                        print(f"Joueur {self.clients[adresse_joueur][0]} a été ajouté à la file d'attente")
+                    if not client_address in self.queue:
+                        self.queue.append(client_address)
+                        print(f"Joueur {self.clients[client_address][0]} a été ajouté à la file d'attente")
                 ## Inutile si on retire correctement les joueurs quand ils ne recherchent plus une partie
                 ## ou bien s'ils sont déjà dans une partie
                 else:
                     # print("Retrait de la file d'attente")
-                    if adresse_joueur in self.liste_attente:
-                        self.liste_attente.remove(adresse_joueur)
-                        print(f"Joueur {self.clients[adresse_joueur][0]} a été retiré de la file d'attente")
+                    if client_address in self.queue:
+                        self.queue.remove(client_address)
+                        print(f"Joueur {self.clients[client_address][0]} a été retiré de la file d'attente")
 
-            print(f"Nombre de joueurs dans la file d'attente {len(self.liste_attente)}")
+            print(f"Nombre de joueurs dans la file d'attente {len(self.queue)}")
             self.find_matching_players()
             time.sleep(1)
     
     def find_matching_players(self):
         # Parcourir les clients pour comparer les MMR
-        for client_address in self.liste_attente:
+        for client_address in self.queue:
             # Parcourir à nouveau les clients pour comparer les MMR avec les autres clients
-            for other_client_address in self.liste_attente:
+            for other_client_address in self.queue:
                 # Vérifier si les adresses sont différentes et si les MMR sont égaux
                 diff_mmr = abs(self.clients[client_address][1] - self.clients[other_client_address][1])
                 if client_address != other_client_address and self.clients[client_address][0] != self.clients[other_client_address][0] and diff_mmr < 51: #self.clients[client_address][1] == self.clients[other_client_address][1]
@@ -211,8 +212,8 @@ class UDPServer:
                     self.clients[client_address][3] = id_partie #self.clients[client_address][3] = partie.id_partie
                     self.clients[other_client_address][3] = id_partie #self.clients[other_client_address][3] = partie.id_partie
                     # Retire les deux joueurs qui viennent de trouver une partie de la liste d'attente
-                    self.liste_attente.remove(client_address)
-                    self.liste_attente.remove(other_client_address)
+                    self.queue.remove(client_address)
+                    self.queue.remove(other_client_address)
                     # Modifie le statut d'attente des deux joueurs pour dire qu'ils ne sont plus en attente d'une partie
                     self.clients[client_address][2] = 0
                     self.clients[other_client_address][2] = 0
@@ -221,21 +222,22 @@ class UDPServer:
                     print("Aucune partie créée")
 
     def start_server(self):
+        self.read_server_info_from_file()
         try:
             # Démarrer un thread pour recevoir les messages des clients
             threading.Thread(target=self.receive_messages).start()
             # Démarrer un thread pour supprimer les clients inactifs
             threading.Thread(target=self.remove_inactive_clients).start()
-            threading.Thread(target=self.maj_file_dattente).start()
+            threading.Thread(target=self.update_queue).start()
             # Garder le programme en cours d'exécution
-            while self.running:
+            while self.is_running:
                 time.sleep(1)
         
         except KeyboardInterrupt:
             self.stop_server()
     
     def stop_server(self):
-        self.running = False
+        self.is_running = False
         self.server_socket.close()
         print("Serveur arrêté")
 
