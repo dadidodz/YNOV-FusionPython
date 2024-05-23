@@ -48,7 +48,7 @@ class UDPServer:
                             self.server_socket.sendto("Vous êtes toujours connecté".encode('utf-8'), client_address)
                             print(f"Message reçu de {client_address}: {message_json.decode()}")
                         
-                        case "connection":
+                        case "connexion":
                             infos = [message[1], 1000, 0, None, time.time()]
                             self.clients[client_address] = infos
                             self.server_socket.sendto(f"{self.clients[client_address][0]}".encode('utf-8'), client_address)
