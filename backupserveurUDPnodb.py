@@ -16,6 +16,8 @@ class UDPServer:
     def __init__(self, server_ip=None, server_port=None):
         self.server_ip = server_ip
         self.server_port = server_port
+        self.read_server_info_from_file()
+        
         self.clients = {} # Exemple format : ('192.168.1.100', 12345): [dorian, 1000, 0, None, 1647831000.0]
         self.queue = []
         self.parties = {} # Exemple format : 1: Partie
@@ -222,7 +224,7 @@ class UDPServer:
                     print("Aucune partie créée")
 
     def start_server(self):
-        self.read_server_info_from_file()
+        # self.read_server_info_from_file()
         try:
             # Démarrer un thread pour recevoir les messages des clients
             threading.Thread(target=self.receive_messages).start()
@@ -245,5 +247,6 @@ class UDPServer:
 # Utilisation du serveur
 if __name__ == "__main__":
     # server = UDPServer('10.34.0.248', 12345)
-    server = UDPServer('192.168.1.45', 12345)
+    # server = UDPServer('192.168.1.45', 12345)
+    server = UDPServer()
     server.start_server()
