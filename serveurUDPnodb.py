@@ -94,10 +94,12 @@ class UDPServer:
                             self.server_socket.sendto(reponse_json.encode(), client_address)
 
                         case "partie trouvee":
-                            if self.clients[client_address][3] != None :
-                                reponse = ["Oui"]
+                            if self.clients[client_address][3] != None : # est ce que le client x a trouvé une partie 
+                                
+                                reponse = ["Oui", self.parties[self.clients[client_address][3]].current_player, self.parties[self.clients[client_address][3]].joueurs[self.clients[client_address][0]]] # recupéré la personne qui a trouvé la partie en lui attribuant la croix ou le rond
                                 reponse_json = json.dumps(reponse)
                                 self.server_socket.sendto(reponse_json.encode(), client_address)
+                                
                             else:
                                 reponse = ["Non"]
                                 reponse_json = json.dumps(reponse)
@@ -105,12 +107,15 @@ class UDPServer:
                         
                         case "maj partie":
                             if self.clients[client_address][3] not in self.parties:
+                                # est ce que c'est le tour du joueur x
                                 reponse = ["partie_lost"]
                                 reponse_json = json.dumps(reponse)
                                 self.server_socket.sendto(reponse_json.encode(), client_address)
                                 self.clients[client_address][3] = None
+                                
                             else:
                                 if self.parties[self.clients[client_address][3]].temps_derniere_action > message[1]:
+                                    currentPlayer = self.parties[self.clients[client_address][3]].current_player 
                                     actions = self.parties[self.clients[client_address][3]].get_actions_after_time(message[1])
                                     print(actions)
                                     if actions[len(actions)-1][3] is True:
@@ -124,7 +129,7 @@ class UDPServer:
                                             self.clients[client_address][1] = self.clients[client_address][1] - 5
                                             print(f"MMR de {self.clients[client_address][0]} : {self.clients[client_address][1]}")
 
-                                    reponse = ["nouvelle action", actions]
+                                    reponse = ["nouvelle action", actions, currentPlayer]
                                     reponse_json = json.dumps(reponse)
                                     self.server_socket.sendto(reponse_json.encode(), client_address)
                                 else:
@@ -219,7 +224,7 @@ class UDPServer:
                     # Modifie le statut d'attente des deux joueurs pour dire qu'ils ne sont plus en attente d'une partie
                     self.clients[client_address][2] = 0
                     self.clients[other_client_address][2] = 0
-                    print("Partie créée")
+
                 else: 
                     print("Aucune partie créée")
 
@@ -243,6 +248,15 @@ class UDPServer:
         self.server_socket.close()
         print("Serveur arrêté")
 
+
+class Partie:
+    def __init__(self, joueur1, joueur2):
+        self.joueur1 = joueur1
+        self.joueur2 = joueur2
+        self.tour_actuel = joueur1
+
+    def premier_joueur(self):
+        return self.tour_actuel
 
 # Utilisation du serveur
 if __name__ == "__main__":

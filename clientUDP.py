@@ -33,6 +33,9 @@ class UDPClient:
         self.last_update_partie = None
 
         self.pseudo_client = ""
+        self.currentPlayer = ""
+        self.displayCurrentPlayer = ""
+        
     
     def read_server_info_from_file(self, filename='config.txt'):
         try:
@@ -136,10 +139,12 @@ class UDPClient:
 
             if message_received[0] == "Oui":
                 print("Réponse serveur : Oui")
+                self.playerSymbol.config(text=f"{self.pseudo_client} Symbole : {message_received[2]}")
                 self.enable_btn_find_game()
                 self.show_page_3()
                 self.last_update_partie = time.time()
-
+                self.currentPlayer = message_received[1]
+                self.updateCurrentPlayer()
                 self.keep_update_game_active = True
                 self.update_game()
 
@@ -170,7 +175,9 @@ class UDPClient:
                     self.force_quit_game()
                 if response_decoded[0] == "nouvelle action":
                     for actions in response_decoded[1]:
-                        row, col, txt, game_state, winner, loser = actions
+                        row, col, txt, game_state, winner, loser, current_Player = actions
+                        self.currentPlayer = response_decoded[2] # troisème parametre du message donc le joueur current
+                        self.updateCurrentPlayer()
                         self.buttons[row][col].config(text=txt)
                         if game_state:
                             if winner == None:
@@ -371,11 +378,16 @@ class UDPClient:
         self.btn_cancel_find_game.config(state="disabled")
         self.btn_find_game.config(state="enable")
 
+
+
+    def updateCurrentPlayer(self):
+        self.labelCurrentPlayer.config(text=f"C'est à : {self.currentPlayer} de jouer ")
+        
     def run(self):
         self.read_server_info_from_file()
         self.root = Tk()
         self.root.geometry("400x200")
-        self.root.title("Client UDP")
+        self.root.title("TIC TAC TOE")
 
         # Création des pages
         self.page_1 = Frame(self.root)
@@ -456,23 +468,35 @@ class UDPClient:
 
         #----------Création et config widgets
         self.chat_display = Text(self.page_3, height=8, width=25, state=DISABLED)
+        self.displayCurrentPlayer = self.currentPlayer
+        Label(self.page_3, text="Entrez votre message:")
         self.validate_cmd = self.page_3.register(self.on_validate)
         self.entry_msg = Entry(self.page_3, textvariable=self.message_chat, validate="key", validatecommand=(self.validate_cmd, "%P"))
+        label_message = Label(self.page_3, text="Entrez votre message:")
+        label_message.grid(row=5, column=0, sticky="e")
+        self.entry_msg.grid(row=5, column=1, columnspan=2, sticky="ew")
+        
         self.btn_send_message_chat = Button(self.page_3, text="Envoyer", command=lambda:[self.send_message_chat()])
         self.btn_quit_game = Button(self.page_3, text="Quitter la partie", command=self.quit_game) #self.return_page_2()
         # self.btn_rejouer = Button(self.page_3, text="Rejouer", state="disabled", command=lambda:[])
 
         #----------Grid widget
-        Label(self.page_3, text="Page 3").grid(row=0, column=1)
+        self.labelCurrentPlayer = Label(self.page_3, text="")
+        self.labelCurrentPlayer.grid(row=0, column=1)
+
         # self.label_pseudo = Label(self.page_2, text="")
         # self.label_pseudo.pack()
 
         self.chat_display.grid(row=4, column=0, columnspan=3, sticky="ew")
-        Label(self.page_3, text="Connecté").grid(row=5, column=0, columnspan=3, sticky="ew")
+        # Label(self.page_3, text="Connecté").grid(row=5, column=0, columnspan=3, sticky="ew")
+        Label(self.page_3, text="Entrez votre Message en dessous").grid(row=5, column=0, columnspan=3, sticky="ew")
         self.entry_msg.grid(row=6, column=0, columnspan=2, sticky="ew")
         self.btn_send_message_chat.grid(row=6, column=2, sticky="ew")
         self.btn_quit_game.grid(row=7, column=0, sticky="w")
 
+        self.playerSymbol = Label(self.page_3, text="")
+        self.playerSymbol.grid(row=8, column=1)
+        
         self.buttons = [[None for _ in range(3)] for _ in range(3)]
 
         for i in range(3):
