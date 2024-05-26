@@ -248,11 +248,12 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
             except Exception as e:
                 print(f"Erreur lors de la connexion au serveur : {e}")
         else:
-            messagebox.showwarning("Erreur", "Le message contient des caractères interdits.")
+            self.entry_msg.delete(0, 'end')
+            messagebox.showwarning("Erreur", "Votre message contient des caractères interdits ou est trop court.")
     
     def check_message_chat(self): # permet de checker si le message contient des caractères interdits
         forbidden_characters = r"[:\\;{}]"
-        if re.search(forbidden_characters, self.message_chat.get()):
+        if re.search(forbidden_characters, self.message_chat.get()) or len(self.message_chat.get()) <= 1:
             return True # si le message contient des caractères interdits
         else:
             return False # si le message ne contient pas des caractères interdits
@@ -320,7 +321,7 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
 
     ######## Méthodes avec actions sur la fenetre tkinter
     def on_validate(self, P): # permet de valider le message du chat
-        return len(P) <= 25 and len(P) >= 1 # permet de limiter le message à 25 caractères
+        return len(P) <= 25 # permet de limiter le message à 25 caractères
 
     def return_page_1(self):
         self.enable_btn_find_game()
