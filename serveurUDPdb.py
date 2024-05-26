@@ -20,6 +20,7 @@ class UDPServer:
         self.read_server_info_from_file()
         
         self.clients = {} # Exemple format : ('192.168.1.100', 12345): [dorian, 1000, 0, None, 1647831000.0]
+        self.players = {} # ex: ('192.168.10.1', 12345) : [dorian, 1000, 168552223.0] pseudo, mmr, en_recherche, id_partie, timestamp
         self.queue = []
         self.parties = {} # Exemple format : 1: Partie
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -52,13 +53,7 @@ class UDPServer:
                 if message_json:
                     message = json.loads(message_json.decode())
                     match message[0]:
-                        case "alive":
-                            self.clients[client_address][4] = time.time()
-                            self.server_socket.sendto("Vous êtes toujours connecté".encode('utf-8'), client_address)
-                            print(f"Message reçu de {client_address}: {message_json.decode()}")
-                        
                         case "connection":
-                            
                             sql = '''
                             SELECT 1
                             FROM Joueur
@@ -88,12 +83,23 @@ class UDPServer:
                                 data = (message[1], None, client_address[0], client_address[1], 1, 1000, 0, None)
                                 cursor.execute(sql, data)
                                 connection.commit()
-                                connection.close()
+                                
                             
                             infos = [message[1], 1000, 0, None, time.time()]
                             self.clients[client_address] = infos
+
+                            player_infos = [message[1], time.time()] 
+                            self.players[client_address] = player_infos # ex: ('192.168.10.1', 12345) : [dorian, 168552223.0]
+                            
                             self.server_socket.sendto(f"{self.clients[client_address][0]}".encode('utf-8'), client_address)
 
+                        case "alive":
+                            self.players[client_address][1] = time.time()
+
+                            self.clients[client_address][4] = time.time()
+                            self.server_socket.sendto("Vous êtes toujours connecté".encode('utf-8'), client_address)
+                            print(f"Message reçu de {client_address}: {message_json.decode()}")
+                        
                         case "chat":
                             print(f"Dans chat {client_address} Pseudo : {self.clients[client_address][0]}")
                             self.parties[self.clients[client_address][3]].chat.add_message(self.clients[client_address][0], message[1])
@@ -190,6 +196,9 @@ class UDPServer:
                         
                         case _:
                             print(f"Message {message[0]} non géré ")
+                    
+
+                connection.close()
             except socket.timeout:
                 continue
             except Exception as e:
