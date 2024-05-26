@@ -21,6 +21,7 @@ class UDPServer:
         
         self.clients = {} # Exemple format : ('192.168.1.100', 12345): [dorian, 1000, 0, None, 1647831000.0]
         self.players = {} # ex: ('192.168.10.1', 12345) : [dorian, 1000, 168552223.0] pseudo, mmr, en_recherche, id_partie, timestamp
+        self.connected_clients = {}
         self.queue = []
         self.parties = {} # Exemple format : 1: Partie
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -53,52 +54,148 @@ class UDPServer:
                     message = json.loads(message_json.decode())
                     match message[0]:
                         case "connection":
-                            sql = '''
-                            SELECT 1
-                            FROM Joueur
-                            WHERE pseudo = ?
-                            LIMIT 1
-                            '''
                             pseudo_client = message[1]
-                            cursor.execute(sql, (pseudo_client,))
-                            result = cursor.fetchone()
-                            if result:
-                                print(f"Le joueur {message[1]} existe dans la base de données.")
-                                sql = '''
-                                UPDATE Joueur
-                                SET IP = ?, Port = ?, Connecter = ?
-                                WHERE Pseudo = ?
-                                '''
-                                data = (client_address[0], client_address[1], 1, message[1])
-                                cursor.execute(sql, data)
-                                connection.commit()
-
+                            already_connected = any(pseudo_client in valeurs for valeurs in self.connected_clients.values())
+                            if already_connected:
+                                reponse = ["already_connected"]
+                                reponse_json = json.dumps(reponse)
+                                self.server_socket.sendto(reponse_json.encode(), client_address)
                             else:
-                                print(f"Le joueur {message[1]} est un nouvel utilisateur")
                                 sql = '''
-                                INSERT INTO Joueur (Pseudo, Mot_de_passe, IP, Port, Connecter, MMR, En_attente, Id_partie)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                SELECT 1
+                                FROM Joueur
+                                WHERE pseudo = ?
+                                LIMIT 1
                                 '''
-                                data = (message[1], None, client_address[0], client_address[1], 1, 1000, 0, None)
+                                cursor.execute(sql, (pseudo_client,))
+                                result = cursor.fetchone()
+                                if result:
+                                    print(f"Le joueur {message[1]} existe dans la base de données.")
+                                    sql = '''
+                                    UPDATE Joueur
+                                    SET IP = ?, Port = ?
+                                    WHERE Pseudo = ?
+                                    '''
+                                    data = (client_address[0], client_address[1], message[1])
+
+                                else:
+                                    print(f"Le joueur {message[1]} est un nouvel utilisateur")
+                                    sql = '''
+                                    INSERT INTO Joueur (Pseudo, Mot_de_passe, IP, Port, MMR)
+                                    VALUES (?, ?, ?, ?, ?)
+                                    '''
+                                    data = (message[1], None, client_address[0], client_address[1], 1000)
+
                                 cursor.execute(sql, data)
                                 connection.commit()
+                                    
                                 
-                            
-                            infos = [message[1], 1000, 0, None, time.time()]
-                            self.clients[client_address] = infos
+                                infos = [message[1], 1000, 0, None, time.time()]
+                                self.clients[client_address] = infos
+                                # client_infos = [message[1], time.time()] 
+                                # self.connected_clients[client_address] = client_infos # ex: ('192.168.10.1', 12345) : [dorian, 168552223.0]
 
-                            clients_infos = [message[1], time.time()] 
-                            self.connected_clients[client_address] = clients_infos # ex: ('192.168.10.1', 12345) : [dorian, 168552223.0]
-                            
-                            self.server_socket.sendto(f"{self.clients[client_address][0]}".encode('utf-8'), client_address)
+                                reponse = ["connected"]
+                                reponse_json = json.dumps(reponse)
+                                self.server_socket.sendto(reponse_json.encode(), client_address)
+
+                                # self.server_socket.sendto(f"{self.clients[client_address][0]}".encode('utf-8'), client_address)
 
                         case "alive":
-                            self.players[client_address][1] = time.time()
-
+                            # self.connected_clients[client_address][1] = time.time()
                             self.clients[client_address][4] = time.time()
                             self.server_socket.sendto("Vous êtes toujours connecté".encode('utf-8'), client_address)
                             print(f"Message reçu de {client_address}: {message_json.decode()}")
+
+                        case "recherche partie":
+                            sql = '''
+                            SELECT MMR
+                            FROM Joueur
+                            WHERE pseudo = ?
+                            '''
+
+                            cursor.execute(sql, (self.clients[client_address][0],))
+                            # mmr_client_tuple = cursor.fetchone()
+                            # mmr_client = mmr_client_tuple[0]
+                            mmr_client = cursor.fetchone()[0]
+                            self.clients[client_address][1] = mmr_client
+                            print(f"MMR de {self.clients[client_address][0]} est : mmr_client = {mmr_client}, clients[clients_address] = {self.clients[client_address][1]}")
+                            self.clients[client_address][2] = 1
+                            reponse = ["recherche partie", "Vous etes en recherche de partie"]
+                            reponse_json = json.dumps(reponse)
+                            self.server_socket.sendto(reponse_json.encode(), client_address)
                         
+                        case "quitter file attente":
+                            self.clients[client_address][2] = 0
+                            if client_address in self.queue:
+                                self.queue.remove(client_address)
+                            print(f"Retrait du joueur {self.clients[client_address][0]} de la file d'attente ({self.clients[client_address]})")
+                            reponse = ["retrait file attente"]
+                            reponse_json = json.dumps(reponse)
+                            self.server_socket.sendto(reponse_json.encode(), client_address)
+
+                        case "partie trouvee":
+                            if self.clients[client_address][3] != None : # est ce que le client x a trouvé une partie 
+                                
+                                reponse = ["Oui", self.parties[self.clients[client_address][3]].current_player, self.parties[self.clients[client_address][3]].joueurs[self.clients[client_address][0]]] # recupéré la personne qui a trouvé la partie en lui attribuant la croix ou le rond
+                                reponse_json = json.dumps(reponse)
+                                self.server_socket.sendto(reponse_json.encode(), client_address)
+                                
+                            else:
+                                reponse = ["Non"]
+                                reponse_json = json.dumps(reponse)
+                                self.server_socket.sendto(reponse_json.encode(), client_address)
+                        
+                        case "maj partie":
+                            if self.clients[client_address][3] not in self.parties:
+                                # est ce que c'est le tour du joueur x
+                                reponse = ["partie_lost"]
+                                reponse_json = json.dumps(reponse)
+                                self.server_socket.sendto(reponse_json.encode(), client_address)
+                                self.clients[client_address][3] = None
+                                
+                            else:
+                                if self.parties[self.clients[client_address][3]].temps_derniere_action > message[1]:
+                                    currentPlayer = self.parties[self.clients[client_address][3]].current_player 
+                                    actions = self.parties[self.clients[client_address][3]].get_actions_after_time(message[1])
+                                    print(actions)
+                                    if actions[len(actions)-1][3] is True:
+                                        # print(f"Le joueur {actions[len(actions)-1][4]} gagne la partie, il gagne du mmr")
+                                        new_mmr = 0
+                                        if self.clients[client_address][0] == actions[len(actions)-1][4]:
+                                            new_mmr = self.clients[client_address][1] + 5
+                                            
+                                            # self.clients[client_address][1] = self.clients[client_address][1] + 5
+                                            
+                                        if self.clients[client_address][0] == actions[len(actions)-1][5]:
+                                            new_mmr = self.clients[client_address][1] - 5
+                                            # print(new_mmr)
+                                            # self.clients[client_address][1] = self.clients[client_address][1] - 5
+                                        
+                                        print(new_mmr)
+                                        sql = '''
+                                        UPDATE Joueur
+                                        SET MMR = ?
+                                        WHERE Pseudo = ?
+                                        '''
+                                        data = (new_mmr, self.clients[client_address][0])
+                                        cursor.execute(sql, data)
+                                        connection.commit()
+
+                                    reponse = ["nouvelle action", actions, currentPlayer]
+                                    reponse_json = json.dumps(reponse)
+                                    self.server_socket.sendto(reponse_json.encode(), client_address)
+                                else:
+                                    reponse = ["zero nouvelle action"]
+                                    reponse_json = json.dumps(reponse)
+                                    self.server_socket.sendto(reponse_json.encode(), client_address)
+
+                        case "board":
+                            board = self.parties[self.clients[client_address][3]].get_board()
+                            reponse = ["full board", board]
+                            reponse_json = json.dumps(reponse)
+                            self.server_socket.sendto(reponse_json.encode(), client_address)
+
                         case "chat":
                             print(f"Dans chat {client_address} Pseudo : {self.clients[client_address][0]}")
                             self.parties[self.clients[client_address][3]].chat.add_message(self.clients[client_address][0], message[1])
@@ -120,60 +217,6 @@ class UDPServer:
                                 reponse_json = json.dumps(reponse)
                                 self.server_socket.sendto(reponse_json.encode(), client_address)
                     
-                        case "recherche partie":
-                            self.clients[client_address][2] = 1
-                            reponse = ["recherche partie", "Vous etes en recherche de partie"]
-                            reponse_json = json.dumps(reponse)
-                            self.server_socket.sendto(reponse_json.encode(), client_address)
-                        
-                        case "quitter file attente":
-                            self.clients[client_address][2] = 0
-                            if client_address in self.queue:
-                                self.queue.remove(client_address)
-                            print(f"Retrait du joueur {self.clients[client_address][0]} de la file d'attente ({self.clients[client_address]})")
-                            reponse = ["retrait file attente"]
-                            reponse_json = json.dumps(reponse)
-                            self.server_socket.sendto(reponse_json.encode(), client_address)
-
-                        case "partie trouvee":
-                            if self.clients[client_address][3] != None :
-                                reponse = ["Oui"]
-                                reponse_json = json.dumps(reponse)
-                                self.server_socket.sendto(reponse_json.encode(), client_address)
-                            else:
-                                reponse = ["Non"]
-                                reponse_json = json.dumps(reponse)
-                                self.server_socket.sendto(reponse_json.encode(), client_address)
-                        
-                        case "maj partie":
-                            if self.clients[client_address][3] not in self.parties:
-                                reponse = ["partie_lost"]
-                                reponse_json = json.dumps(reponse)
-                                self.server_socket.sendto(reponse_json.encode(), client_address)
-                                self.clients[client_address][3] = None
-                            else:
-                                if self.parties[self.clients[client_address][3]].temps_derniere_action > message[1]:
-                                    actions = self.parties[self.clients[client_address][3]].get_actions_after_time(message[1])
-                                    print(actions)
-                                    if actions[len(actions)-1][3] is True:
-                                        # print(f"Le joueur {actions[len(actions)-1][4]} gagne la partie, il gagne du mmr")
-
-                                        if self.clients[client_address][0] == actions[len(actions)-1][4]:
-                                            self.clients[client_address][1] = self.clients[client_address][1] + 5
-                                            print(f"MMR de {self.clients[client_address][0]} : {self.clients[client_address][1]}")
-                                        
-                                        if self.clients[client_address][0] == actions[len(actions)-1][5]:
-                                            self.clients[client_address][1] = self.clients[client_address][1] - 5
-                                            print(f"MMR de {self.clients[client_address][0]} : {self.clients[client_address][1]}")
-
-                                    reponse = ["nouvelle action", actions]
-                                    reponse_json = json.dumps(reponse)
-                                    self.server_socket.sendto(reponse_json.encode(), client_address)
-                                else:
-                                    reponse = ["zero nouvelle action"]
-                                    reponse_json = json.dumps(reponse)
-                                    self.server_socket.sendto(reponse_json.encode(), client_address)
-                        
                         case "jouer ici":
                             self.parties[self.clients[client_address][3]].jouer(message[1], message[2], self.clients[client_address][0]) # row, col, addr_joueur,)
                         
@@ -249,7 +292,9 @@ class UDPServer:
             # Parcourir à nouveau les clients pour comparer les MMR avec les autres clients
             for other_client_address in self.queue:
                 # Vérifier si les adresses sont différentes et si les MMR sont égaux
-                diff_mmr = abs(self.clients[client_address][1] - self.clients[other_client_address][1])
+                mmr_p1 = self.clients[client_address][1]
+                mmr_p2 = self.clients[other_client_address][1]
+                diff_mmr = abs(mmr_p1 - mmr_p2)
                 if client_address != other_client_address and self.clients[client_address][0] != self.clients[other_client_address][0] and diff_mmr < 51: #self.clients[client_address][1] == self.clients[other_client_address][1]
                     # Ajouter les adresses des joueurs ayant le même MMR à la liste temporaire
                     id_partie = random.randint(999, 10000)

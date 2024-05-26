@@ -29,6 +29,9 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
         self.keep_update_game_active = False # met a jour les actions de la partie
         self.keep_update_game_id = None 
 
+        self.keep_get_full_board_active = False
+        self.keep_get_full_board_id = None
+
         self.last_update_msg = time.time() # permet de savoir le dernier message envoyé
         self.last_update_partie = None # permet de savoir la dernière action de la partie
 
@@ -56,9 +59,13 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
 
                 self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port)) # envoie le message au serveur
                 response, _ = self.client_socket.recvfrom(1024) # attendre la réponse du serveur
-                
+                response_decoded = json.loads(response.decode())
+
                 print("Dans connection, réponse serveur :", response.decode()) # afficher la réponse du serveur
-                if response: # si la réponse est vrai afficher la page 2
+                if response_decoded[0] == "already_connected":
+                    self.entry_pseudo.delete(0, 'end') # supprimer le pseudo dans l'entrée utilisateur
+                    messagebox.showwarning("Erreur", "Vous êtes déjà connecté depuis un autre poste.")
+                else: # si la réponse est vrai afficher la page 2
                     self.keep_alive_active =  True # permet continuer l'appel a stayconnected
                     self.show_page_2() 
                     self.stay_connected() # permet de rester connecté
@@ -136,18 +143,21 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
             self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
 
             response, _ = self.client_socket.recvfrom(1024)
-            message_received = json.loads(response.decode()) # permet de decoder le message reçu DU SERVEUR EST STOCKÉ DANS UNE VARIABLE
+            response_decoded = json.loads(response.decode()) # permet de decoder le message reçu DU SERVEUR EST STOCKÉ DANS UNE VARIABLE
 
-            if message_received[0] == "Oui": # si le message reçu est "oui"
+            if response_decoded[0] == "Oui": # si le message reçu est "oui"
                 print("Réponse serveur : Oui") 
-                self.player_symbol.config(text=f"Connecté en tant que : {self.pseudo_client}, Symbole : {message_received[2]}") # permet de savoir le symbole du joueur
+                self.player_symbol.config(text=f"Connecté en tant que : {self.pseudo_client}, Symbole : {response_decoded[2]}") # permet de savoir le symbole du joueur
                 self.enable_btn_find_game()
                 self.show_page_3() # afficher la partie de manière graphique
                 self.last_update_partie = time.time() # quand a t'on maj la partie la dernière fois
-                self.currentPlayer = message_received[1] # permet de savoir qui doit jouer
+                self.currentPlayer = response_decoded[1] # permet de savoir qui doit jouer
                 self.update_current_player() # permet de mettre à jour le joueur qui doit jouer
                 self.keep_update_game_active = True # permet de maintenir la mise à jour de la partie active
                 self.update_game() # permet de mettre à jour la partie
+
+                self.keep_get_full_board_active = True
+                self.get_full_board()
 
                 self.keep_update_chat_active = True # permet de maintenir la mise à jour du chat active
                 self.update_chat() # permet de mettre à jour le chat
@@ -161,6 +171,17 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
         except Exception as e:
             print(f"Erreur lors de la demande: {e}")
     
+    def play(self, row, col): # permet de jouer à une case (appeler quand on clique sur une des 9 cases du morpion)
+        try:
+            print(f"Je peux jouer ici {row}, {col}")  # afficher dans le terminal
+            # Envoyer un message au serveur pour indiquer que le client est toujours actif
+            message = ["jouer ici", row, col] 
+            message_json = json.dumps(message) 
+            self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port)) # envoie au serveur la position du coup
+
+        except Exception as e:
+            print(f"Erreur lors de la demande pour jouer à cette case: {e}")
+
     def update_game(self):
         try:
             # Envoyer un message au serveur pour savoir si une action à été effectué dans la partie
@@ -201,7 +222,32 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
         
         if self.keep_update_game_active: # si la mise à jour de la partie est active
             self.keep_update_game_id = self.root.after(1000, self.update_game) # permet de continuer la mise à jour de la partie
-    
+
+    def get_full_board(self):
+        try:
+            message = ["board"] 
+            message_json = json.dumps(message) 
+            self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port)) # envoie au serveur la position du coup
+            response, _ = self.client_socket.recvfrom(1024) 
+            if response: # si le serveur répond au client
+                response_decoded = json.loads(response.decode())
+                board_game = response_decoded[1]
+                for i in range(3):
+                    for j in range(3):
+                        button_text = self.buttons[i][j].cget('text')
+                        board_value = board_game[i][j]
+                        if button_text != board_value:
+                            self.buttons[i][j].config(board_value)
+                            print(f"Difference at position ({i},{j}): Button has '{button_text}' but board has '{board_value}'")
+                        else:
+                            print(f"Match at position ({i},{j}): Both have '{button_text}'")
+
+        except Exception as e:
+            print(f"Erreur lors de la mise à jour complète du board: {e}")
+
+        if self.keep_get_full_board_active: # si la mise à jour de la partie est active
+            self.keep_get_full_board_id = self.root.after(10000, self.get_full_board) # permet de continuer la mise à jour de la partie
+
     def update_chat(self):
         try:
             # Envoyer un message au serveur pour indiquer que le client est toujours actif
@@ -258,20 +304,12 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
         else:
             return False # si le message ne contient pas des caractères interdits
     
-    def play(self, row, col): # permet de jouer à une case (appeler quand on clique sur une des 9 cases du morpion)
-        try:
-            print(f"Je peux jouer ici {row}, {col}")  # afficher dans le terminal
-            # Envoyer un message au serveur pour indiquer que le client est toujours actif
-            message = ["jouer ici", row, col] 
-            message_json = json.dumps(message) 
-            self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port)) # envoie au serveur la position du coup
-
-        except Exception as e:
-            print(f"Erreur lors de la demande pour jouer à cette case: {e}")
-        
     def force_quit_game(self): # permet de forcer à quitter la partie
         self.keep_update_game_active = False
         self.root.after_cancel(self.keep_update_game_id) # permet d'annuler la mise à jour de la partie
+
+        self.keep_get_full_board_active = False
+        self.root.after_cancel(self.keep_get_full_board_id)
 
         self.keep_update_chat_active = False
         self.root.after_cancel(self.keep_update_chat_id) # permet d'annuler la mise à jour du chat
@@ -288,6 +326,9 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
             if response :
                 self.keep_update_game_active = False # permet d'annuler la mise à jour de la partie 
                 self.root.after_cancel(self.keep_update_game_id) # permet d'annuler la mise à jour de la partie
+
+                self.keep_get_full_board_active = False
+                self.root.after_cancel(self.keep_get_full_board_id)
 
                 self.keep_update_chat_active = False 
                 self.root.after_cancel(self.keep_update_chat_id) # permet d'annuler la mise à jour du chat
@@ -489,7 +530,7 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
 
         for i in range(3):
             for j in range(3):
-                button = Button(self.page_3, text="", style="Case.TButton", command=lambda row=i, col=j: self.play(row, col))
+                button = Button(self.page_3, text=" ", style="Case.TButton", command=lambda row=i, col=j: self.play(row, col))
                 button.grid(row=i+1, column=j, ipady=10, ipadx=10)
                 self.buttons[i][j] = button
 
