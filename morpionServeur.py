@@ -37,17 +37,22 @@ class MorpionServeur:
                         else:
                             self.perdant = self.pseudo_j1
 
-                        self.historique_actions.append((row, col, self.joueurs[self.current_player], self.is_partie_finie, self.gagnant, self.perdant, time.time()))
+                        self.historique_actions.append((row, col, self.joueurs[self.current_player], self.is_partie_finie, self.gagnant, self.current_player, self.perdant ,time.time()))
                     elif self.is_board_full():
                         self.is_partie_finie = True
-                        self.historique_actions.append((row, col, self.joueurs[self.current_player], self.is_partie_finie, self.gagnant, self.perdant ,time.time()))
+                        self.historique_actions.append((row, col, self.joueurs[self.current_player], self.is_partie_finie, self.gagnant, self.current_player, self.perdant ,time.time()))
                     else:
-                        self.historique_actions.append((row, col, self.joueurs[self.current_player], self.is_partie_finie, None, None ,time.time()))
+                        
+                        self.historique_actions.append((row, col, self.joueurs[self.current_player], self.is_partie_finie, None, None, self.current_player,time.time()))
                         self.current_player = self.pseudo_j2 if self.current_player == self.pseudo_j1 else self.pseudo_j1
+                        
+                        
+                        
+
     
-    def get_actions_after_time(self, timestamp):
+    def get_actions_after_time(self, timestamp): # le serveur demande au morpion si après chaque seconde il y'a un nouveau coup
         # Récupérer les messages envoyés après le temps donné
-        action_after_time = [(row, col, txt, etat_partie, gagnant, perdant) for row, col, txt, etat_partie, gagnant, perdant, action_time in self.historique_actions if action_time > timestamp]
+        action_after_time = [(row, col, txt, etat_partie, gagnant, perdant, current_player ) for row, col, txt, etat_partie, gagnant, perdant,current_player, action_time in self.historique_actions if action_time > timestamp]
         return action_after_time
 
     def check_winner(self):
