@@ -28,7 +28,6 @@ class UDPServer:
         self.chat = Chat()
         self.is_running = True  # Condition d'arrêt
 
-        
         print(f"Serveur UDP en écoute sur {self.server_ip}:{self.server_port}")
     
     def read_server_info_from_file(self, filename='config.txt'):
@@ -88,8 +87,8 @@ class UDPServer:
                             infos = [message[1], 1000, 0, None, time.time()]
                             self.clients[client_address] = infos
 
-                            player_infos = [message[1], time.time()] 
-                            self.players[client_address] = player_infos # ex: ('192.168.10.1', 12345) : [dorian, 168552223.0]
+                            clients_infos = [message[1], time.time()] 
+                            self.connected_clients[client_address] = clients_infos # ex: ('192.168.10.1', 12345) : [dorian, 168552223.0]
                             
                             self.server_socket.sendto(f"{self.clients[client_address][0]}".encode('utf-8'), client_address)
 

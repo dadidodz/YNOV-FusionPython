@@ -320,7 +320,7 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
 
     ######## Méthodes avec actions sur la fenetre tkinter
     def on_validate(self, P): # permet de valider le message du chat
-        return len(P) <= 25 # permet de limiter le message à 25 caractères
+        return len(P) <= 25 and len(P) >= 1 # permet de limiter le message à 25 caractères
 
     def return_page_1(self):
         self.enable_btn_find_game()
