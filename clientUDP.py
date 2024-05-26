@@ -237,7 +237,8 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
                         button_text = self.buttons[i][j].cget('text')
                         board_value = board_game[i][j]
                         if button_text != board_value:
-                            self.buttons[i][j].config(board_value)
+                            print(board_value)
+                            self.buttons[i][j].config(text='board_value')
                             print(f"Difference at position ({i},{j}): Button has '{button_text}' but board has '{board_value}'")
                         else:
                             print(f"Match at position ({i},{j}): Both have '{button_text}'")
