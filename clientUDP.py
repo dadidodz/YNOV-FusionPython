@@ -34,7 +34,6 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
 
         self.pseudo_client = ""
         self.currentPlayer = "" # permet de savoir qui doit jouer
-        self.displayCurrentPlayer = "" # permet d'afficher savoir qui doit jouer
         
     
     def read_server_info_from_file(self, filename='config.txt'): # modifier dynamiquement l'ip du serveur et le port du fichier config.txt
@@ -141,12 +140,12 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
 
             if message_received[0] == "Oui": # si le message reçu est "oui"
                 print("Réponse serveur : Oui") 
-                self.playerSymbol.config(text=f"{self.pseudo_client} Symbole : {message_received[2]}") # permet de savoir le symbole du joueur
+                self.player_symbol.config(text=f"Connecté en tant que : {self.pseudo_client}, Symbole : {message_received[2]}") # permet de savoir le symbole du joueur
                 self.enable_btn_find_game()
                 self.show_page_3() # afficher la partie de manière graphique
                 self.last_update_partie = time.time() # quand a t'on maj la partie la dernière fois
                 self.currentPlayer = message_received[1] # permet de savoir qui doit jouer
-                self.updateCurrentPlayer() # permet de mettre à jour le joueur qui doit jouer
+                self.update_current_player() # permet de mettre à jour le joueur qui doit jouer
                 self.keep_update_game_active = True # permet de maintenir la mise à jour de la partie active
                 self.update_game() # permet de mettre à jour la partie
 
@@ -179,7 +178,7 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
                     for actions in response_decoded[1]: # [1] permet de récupérer les actions de la partie depuis la dernière maj
                         row, col, txt, game_state, winner, loser, current_Player = actions # permet de récupérer les informations de la partie
                         self.currentPlayer = response_decoded[2] # troisème parametre du message donc le joueur current
-                        self.updateCurrentPlayer() # permet de mettre à jour le joueur qui doit jouer
+                        self.update_current_player() # permet de mettre à jour le joueur qui doit jouer
                         self.buttons[row][col].config(text=txt) # viens modifier le texte du bouton pour afficher le symbole du joueur
                         if game_state: 
                             if winner == None: 
@@ -376,8 +375,8 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
 
 
 
-    def updateCurrentPlayer(self):
-        self.labelCurrentPlayer.config(text=f"C'est à : {self.currentPlayer} de jouer ")
+    def update_current_player(self):
+        self.label_current_player.config(text=f"C'est à : {self.currentPlayer} de jouer ")
         
     def run(self):
         self.read_server_info_from_file()
@@ -464,12 +463,8 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
 
         #----------Création et config widgets
         self.chat_display = Text(self.page_3, height=8, width=25, state=DISABLED)
-        self.displayCurrentPlayer = self.currentPlayer
-        Label(self.page_3, text="Entrez votre message:")
         self.validate_cmd = self.page_3.register(self.on_validate)
         self.entry_msg = Entry(self.page_3, textvariable=self.message_chat, validate="key", validatecommand=(self.validate_cmd, "%P"))
-        label_message = Label(self.page_3, text="Entrez votre message:")
-        label_message.grid(row=5, column=0, sticky="e")
         self.entry_msg.grid(row=5, column=1, columnspan=2, sticky="ew")
         
         self.btn_send_message_chat = Button(self.page_3, text="Envoyer", command=lambda:[self.send_message_chat()])
@@ -477,21 +472,17 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
         # self.btn_rejouer = Button(self.page_3, text="Rejouer", state="disabled", command=lambda:[])
 
         #----------Grid widget
-        self.labelCurrentPlayer = Label(self.page_3, text="")
-        self.labelCurrentPlayer.grid(row=0, column=1)
-
-        # self.label_pseudo = Label(self.page_2, text="")
-        # self.label_pseudo.pack()
-
+        self.label_current_player = Label(self.page_3, text="")
+        self.label_current_player.grid(row=0, column=1, columnspan = 3, sticky = "ew")
         self.chat_display.grid(row=4, column=0, columnspan=3, sticky="ew")
         # Label(self.page_3, text="Connecté").grid(row=5, column=0, columnspan=3, sticky="ew")
-        Label(self.page_3, text="Entrez votre Message en dessous").grid(row=5, column=0, columnspan=3, sticky="ew")
+        Label(self.page_3, text="Entrez votre message ci-dessous :").grid(row=5, column=0, columnspan=3, sticky="ew")
         self.entry_msg.grid(row=6, column=0, columnspan=2, sticky="ew")
         self.btn_send_message_chat.grid(row=6, column=2, sticky="ew")
         self.btn_quit_game.grid(row=7, column=0, sticky="w")
 
-        self.playerSymbol = Label(self.page_3, text="")
-        self.playerSymbol.grid(row=8, column=1)
+        self.player_symbol = Label(self.page_3, text="")
+        self.player_symbol.grid(row=8, column=0, columnspan = 3, sticky = "ew")
         
         self.buttons = [[None for _ in range(3)] for _ in range(3)]
 
