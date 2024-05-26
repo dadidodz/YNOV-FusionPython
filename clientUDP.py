@@ -146,6 +146,7 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
             response_decoded = json.loads(response.decode()) # permet de decoder le message reçu DU SERVEUR EST STOCKÉ DANS UNE VARIABLE
 
             if response_decoded[0] == "Oui": # si le message reçu est "oui"
+                self.keep_game_search_active = False # permet de désactiver la recherche de partie quand une partie est lancée
                 print("Réponse serveur : Oui") 
                 self.player_symbol.config(text=f"Connecté en tant que : {self.pseudo_client}, Symbole : {response_decoded[2]}") # permet de savoir le symbole du joueur
                 self.enable_btn_find_game()
@@ -162,7 +163,7 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
                 self.keep_update_chat_active = True # permet de maintenir la mise à jour du chat active
                 self.update_chat() # permet de mettre à jour le chat
 
-                self.keep_game_search_active = False # permet de désactiver la recherche de partie quand une partie est lancée
+                
             else:
                 print("Réponse serveur : Non")
                 if self.keep_game_search_active: # si non on continue la recherche de partie
@@ -238,7 +239,7 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
                         board_value = board_game[i][j]
                         if button_text != board_value:
                             print(board_value)
-                            self.buttons[i][j].config(text='board_value')
+                            self.buttons[i][j].config(text=board_value)
                             print(f"Difference at position ({i},{j}): Button has '{button_text}' but board has '{board_value}'")
                         else:
                             print(f"Match at position ({i},{j}): Both have '{button_text}'")

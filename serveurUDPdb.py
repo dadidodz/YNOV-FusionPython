@@ -145,6 +145,8 @@ class UDPServer:
                                 reponse = ["Non"]
                                 reponse_json = json.dumps(reponse)
                                 self.server_socket.sendto(reponse_json.encode(), client_address)
+                            
+                            
                         
                         case "maj partie":
                             if self.clients[client_address][3] not in self.parties:
