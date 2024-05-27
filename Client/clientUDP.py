@@ -75,6 +75,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
                         self.server_ip = line.split(":")[-1].strip()
                     elif "Port du serveur" in line:
                         self.server_port = int(line.split(":")[-1].strip())
+                        
         except Exception as e:
             print(f"Erreur lors de la lecture du fichier de configuration : {e}")
     
@@ -471,9 +472,9 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         Méthode appelé pour bloqué le nombre de caractères rentré dans un message du chat
 
         Paramètre :
-        P (int) : message actuelle dans l'entrée
+        P (str) : message actuelle dans l'entrée
         """
-        return len(P) <= 50 # permet de limiter le message à 50 caractères
+        return len(P) <= 50 # Limite le message à 50 caractères
 
     def return_page_1(self):
         """

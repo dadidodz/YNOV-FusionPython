@@ -7,14 +7,8 @@ import random
 import bcrypt
 import string
 import os
-# from chat import Chat
+from datetime import datetime
 from morpionServeur import MorpionServeur
-
-# A ajouter :   date à laquelle les joueurs rejoingnent la file d'attente
-#               information sur à qui est le tour (dans le chat par exemple)
-#               lien avec la base de données
-# ip ynov dorian = '10.34.0.248'
-# ip dorian apaprt = '192.168.1.45'
 
 class UDPServer:
     def __init__(self, server_ip=None, server_port=None):
@@ -293,7 +287,8 @@ class UDPServer:
             for client_address, values in self.clients.items(): #client_address = key; values = values
                 if values[2] == 1:
                     if not client_address in self.queue:
-                        self.queue.append(client_address)
+                        client_date = (client_address, datetime.now())
+                        self.queue.append(client_date)
                         print(f"Joueur {self.clients[client_address][0]} a été ajouté à la file d'attente")
                 ## Inutile si on retire correctement les joueurs quand ils ne recherchent plus une partie
                 ## ou bien s'ils sont déjà dans une partie
