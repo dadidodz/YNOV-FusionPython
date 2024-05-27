@@ -1,7 +1,6 @@
-import tkinter as tk
-from tkinter import messagebox
 import time
 from chat import Chat
+import sqlite3
 
 class MorpionServeur:
     # def __init__(self, id_partie, addr_joueur1, addr_joueur2, pseudo_j1, pseudo_j2):
@@ -23,9 +22,18 @@ class MorpionServeur:
 
     def jouer(self, row, col, pseudo_joueur):
         if not self.is_partie_finie:
+            connection = sqlite3.connect("fusion.sqlite")
+            cursor = connection.cursor()
             if self.current_player == pseudo_joueur:
                 if self.board[row][col] == " ":
                     self.board[row][col] = self.joueurs[self.current_player]
+                    sql = '''
+                    INSERT INTO Parties (Id_Partie, Ligne, Colonne, Pseudo)
+                    VALUES (?, ?, ?, ?)
+                    '''
+                    data = (self.id_partie, row, col, self.current_player)
+                    cursor.execute(sql, data)
+                    
                     
                     self.temps_derniere_action = time.time()
 
@@ -38,13 +46,45 @@ class MorpionServeur:
                             self.perdant = self.pseudo_j1
 
                         self.historique_actions.append((row, col, self.joueurs[self.current_player], self.is_partie_finie, self.gagnant, self.perdant , self.current_player, time.time()))
+                        sql = '''
+                        DELETE FROM Parties
+                        WHERE Id_Partie = ?
+                        '''
+                        data = (self.id_partie,)
+                        cursor.execute(sql, data)
+                        # connection.commit()
+                        
+                        sql = '''
+                        INSERT INTO HistoriqueParties (Id_Partie, Gagnant, Perdant)
+                        VALUES (?, ?, ?)
+                        '''
+                        data = (self.id_partie, self.gagnant, self.perdant)
+                        cursor.execute(sql, data)
+                        # connection.commit()
+
                     elif self.is_board_full():
                         self.is_partie_finie = True
                         self.historique_actions.append((row, col, self.joueurs[self.current_player], self.is_partie_finie, self.gagnant, self.perdant , self.current_player, time.time()))
-                    else:
+                        sql = '''
+                        DELETE FROM Parties
+                        WHERE Id_Partie = ?
+                        '''
+                        data = (self.id_partie,)
+                        cursor.execute(sql, data)
+                        # connection.commit()
                         
+                        sql = '''
+                        INSERT INTO Parties (Id_Partie, Ligne, Colonne, Pseudo)
+                        VALUES (?, ?, ?, ?)
+                        '''
+                        data = (self.id_partie, row, col, self.current_player)
+                        cursor.execute(sql, data)
+                        # connection.commit()
+                    else:
                         self.historique_actions.append((row, col, self.joueurs[self.current_player], self.is_partie_finie, None, None, self.current_player,time.time()))
                         self.current_player = self.pseudo_j2 if self.current_player == self.pseudo_j1 else self.pseudo_j1
+                    connection.commit()
+            connection.close()
                         
     def get_actions_after_time(self, timestamp): # le serveur demande au morpion si après chaque seconde il y'a un nouveau coup
         # Récupérer les messages envoyés après le temps donné

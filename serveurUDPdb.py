@@ -164,11 +164,13 @@ class UDPServer:
                                 reponse = ["Non"]
                                 reponse_json = json.dumps(reponse)
                                 self.server_socket.sendto(reponse_json.encode(), client_address)
-                            
-                            
                         
+                        case "jouer ici":
+                            self.parties[self.clients[client_address][3]].jouer(message[1], message[2], self.clients[client_address][0]) # row, col, addr_joueur,)
+
                         case "maj partie":
                             if self.clients[client_address][3] not in self.parties:
+
                                 reponse = ["partie_lost"]
                                 reponse_json = json.dumps(reponse)
                                 self.server_socket.sendto(reponse_json.encode(), client_address)
@@ -238,9 +240,6 @@ class UDPServer:
                                 reponse_json = json.dumps(reponse)
                                 self.server_socket.sendto(reponse_json.encode(), client_address)
                     
-                        case "jouer ici":
-                            self.parties[self.clients[client_address][3]].jouer(message[1], message[2], self.clients[client_address][0]) # row, col, addr_joueur,)
-                        
                         case "quitter partie":
                             reponse = ["partie quittee"]
                             reponse_json = json.dumps(reponse)
@@ -318,10 +317,10 @@ class UDPServer:
                 if client_address != other_client_address and self.clients[client_address][0] != self.clients[other_client_address][0] and diff_mmr < 51: #self.clients[client_address][1] == self.clients[other_client_address][1]
                     # Ajouter les adresses des joueurs ayant le même MMR à la liste temporaire
                     
-                    generated_id_partie = generated_id_partie()
+                    generated_id_partie = self.generate_id_unique()
                     id_partie = random.randint(999, 10000)
                     partie = MorpionServeur(generated_id_partie, self.clients[client_address][0], self.clients[other_client_address][0])
-                    self.parties[partie.generated_id_partie] = partie
+                    self.parties[partie.id_partie] = partie
                     self.clients[client_address][3] = generated_id_partie
                     self.clients[other_client_address][3] = generated_id_partie
                     # Retire les deux joueurs qui viennent de trouver une partie de la liste d'attente
@@ -349,15 +348,16 @@ class UDPServer:
         except KeyboardInterrupt:
             self.stop_server()
     
-    def generer_id_unique(self):
+    def generate_id_unique(self):
         connection = sqlite3.connect("fusion.sqlite")
         cursor = connection.cursor()
         while True:
             # Générer un identifiant aléatoire
             id_partie = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+            print(type(id_partie))
 
             # Vérifier si l'identifiant existe déjà dans la base de données
-            cursor.execute("SELECT Id_Partie FROM HistoriquePartie WHERE Id_Partie = ?", (id_partie,))
+            cursor.execute("SELECT Id_Partie FROM HistoriqueParties WHERE Id_Partie = ?", (id_partie,))
             result = cursor.fetchone()
 
             # Si l'identifiant n'existe pas, retourner l'identifiant généré
