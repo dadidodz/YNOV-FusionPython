@@ -6,7 +6,7 @@ import json
 import random
 import bcrypt
 import string
-from chat import Chat
+# from chat import Chat
 from morpionServeur import MorpionServeur
 
 # A ajouter :   date à laquelle les joueurs rejoingnent la file d'attente
@@ -22,12 +22,12 @@ class UDPServer:
         self.read_server_info_from_file()
         
         self.clients = {} # Exemple format : ('192.168.1.100', 12345): [dorian, 1000, 0, None, 1647831000.0]
-        self.connected_clients = {}
+        # self.connected_clients = {}
         self.queue = []
         self.parties = {} # Exemple format : 1: Partie
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.server_socket.bind((self.server_ip, self.server_port))
-        self.chat = Chat()
+        # self.chat = Chat()
         self.is_running = True  # Condition d'arrêt
 
         print(f"Serveur UDP en écoute sur {self.server_ip}:{self.server_port}")

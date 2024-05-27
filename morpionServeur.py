@@ -55,10 +55,10 @@ class MorpionServeur:
                         # connection.commit()
                         
                         sql = '''
-                        INSERT INTO HistoriqueParties (Id_Partie, Gagnant, Perdant)
-                        VALUES (?, ?, ?)
+                        INSERT INTO HistoriqueParties (Id_Partie, Gagnant, Perdant, Pseudo_J1, Pseudo_J2)
+                        VALUES (?, ?, ?, ?, ?)
                         '''
-                        data = (self.id_partie, self.gagnant, self.perdant)
+                        data = (self.id_partie, self.gagnant, self.perdant, self.pseudo_j1, self.pseudo_j2)
                         cursor.execute(sql, data)
                         # connection.commit()
 
@@ -74,10 +74,10 @@ class MorpionServeur:
                         # connection.commit()
                         
                         sql = '''
-                        INSERT INTO Parties (Id_Partie, Ligne, Colonne, Pseudo)
-                        VALUES (?, ?, ?, ?)
+                        INSERT INTO HistoriqueParties (Id_Partie, Gagnant, Perdant, Pseudo_J1, Pseudo_J2)
+                        VALUES (?, ?, ?, ?, ?)
                         '''
-                        data = (self.id_partie, row, col, self.current_player)
+                        data = (self.id_partie, self.gagnant, self.perdant, self.pseudo_j1, self.pseudo_j2)
                         cursor.execute(sql, data)
                         # connection.commit()
                     else:
