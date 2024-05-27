@@ -6,6 +6,7 @@ import json
 import random
 import bcrypt
 import string
+import os
 # from chat import Chat
 from morpionServeur import MorpionServeur
 
@@ -32,8 +33,9 @@ class UDPServer:
 
         print(f"Serveur UDP en écoute sur {self.server_ip}:{self.server_port}")
     
-    def read_server_info_from_file(self, filename='config.txt'):
+    def read_server_info_from_file(self, filename='../config.txt'):
         try:
+            filepath = os.path.join(os.path.dirname(__file__), filename)
             with open(filename, 'r') as file:
                 lines = file.readlines()
                 for line in lines:
@@ -182,11 +184,13 @@ class UDPServer:
                                     actions = self.parties[self.clients[client_address][3]].get_actions_after_time(message[1])
                                     print(actions)
                                     if actions[len(actions)-1][3] is True:
-                                        new_mmr = 0
+                                        new_mmr = 1000
                                         if self.clients[client_address][0] == actions[len(actions)-1][4]:
                                             new_mmr = self.clients[client_address][1] + 5
-                                        if self.clients[client_address][0] == actions[len(actions)-1][5]:
+                                        elif self.clients[client_address][0] == actions[len(actions)-1][5]:
                                             new_mmr = self.clients[client_address][1] - 5
+                                        else:
+                                            new_mmr = self.clients[client_address][1]
                                         
                                         print(new_mmr)
                                         sql = '''
@@ -318,7 +322,7 @@ class UDPServer:
                     # Ajouter les adresses des joueurs ayant le même MMR à la liste temporaire
                     
                     generated_id_partie = self.generate_id_unique()
-                    id_partie = random.randint(999, 10000)
+                    # id_partie = random.randint(999, 10000)
                     partie = MorpionServeur(generated_id_partie, self.clients[client_address][0], self.clients[other_client_address][0])
                     self.parties[partie.id_partie] = partie
                     self.clients[client_address][3] = generated_id_partie

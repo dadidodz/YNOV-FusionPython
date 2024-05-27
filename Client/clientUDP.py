@@ -6,6 +6,7 @@ from tkinter.ttk import *
 import json
 import time
 import re
+import os
 # from morpion import Morpion
 
 # SERVER_IP = '10.34.0.248'  # Adresse IP du serveur #192.168.1.45
@@ -40,8 +41,9 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
         self.currentPlayer = "" # permet de savoir qui doit jouer
         
     
-    def read_server_info_from_file(self, filename='config.txt'): # modifier dynamiquement l'ip du serveur et le port du fichier config.txt
+    def read_server_info_from_file(self, filename='../config.txt'):
         try:
+            filepath = os.path.join(os.path.dirname(__file__), filename)
             with open(filename, 'r') as file:
                 lines = file.readlines()
                 for line in lines:
@@ -176,12 +178,11 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
 
                 self.keep_update_chat_active = True # permet de maintenir la mise à jour du chat active
                 self.update_chat() # permet de mettre à jour le chat
-
                 
             else:
                 print("Réponse serveur : Non")
                 if self.keep_game_search_active: # si non on continue la recherche de partie
-                    self.keep_game_search_id = self.root.after(1000, self.game_search) # permet de continuer la recherche de partie
+                    self.keep_game_search_id = self.root.after(5000, self.game_search) # permet de continuer la recherche de partie
 
         except Exception as e:
             print(f"Erreur lors de la demande: {e}")
@@ -236,7 +237,7 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
             print(f"Erreur lors de la mise à jour de la partie : {e}")
         
         if self.keep_update_game_active: # si la mise à jour de la partie est active
-            self.keep_update_game_id = self.root.after(1000, self.update_game) # permet de continuer la mise à jour de la partie
+            self.keep_update_game_id = self.root.after(3000, self.update_game) # permet de continuer la mise à jour de la partie
 
     def get_full_board(self):
         try:
