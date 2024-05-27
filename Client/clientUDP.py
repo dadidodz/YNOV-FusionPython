@@ -411,7 +411,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         else:
             return False # si le message ne contient pas des caractères interdits
     
-    def force_quit_game(self): # permet de forcer à quitter la partie
+    def force_quit_game(self):
         """
         Force à quitter graphiquement la partie et stoppe les conditions et les appels de mise à jour de la partie et du chat.
         """
@@ -424,7 +424,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         self.keep_update_chat_active = False
         self.root.after_cancel(self.keep_update_chat_id) # Annule l'appel planifié de la mise à jour du chat
 
-        self.return_page_2()    # Revient à la page recherche de partie
+        self.return_page_2()    # Reviens à la page recherche de partie
                
     def quit_game(self):
         """

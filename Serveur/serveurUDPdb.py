@@ -23,6 +23,9 @@ class UDPServer:
         is_running (bool) : Condition de marche du serveur
     """
     def __init__(self):
+        """
+        Initialise les attributs de UDPServeur.
+        """
         self.server_ip = ""
         self.server_port = 0
         self.read_server_info_from_file()
@@ -187,7 +190,7 @@ class UDPServer:
                         case "game_found":
                             if self.connected_clients[client_address][3] != None : # Si le client a un id_partie attribué 
                                 # Crée une réponse avec l'intitulé "Yes" ainsi que le joueur qui doit joué et le pseudo de l'adversaire
-                                reponse = ["Yes", self.games[self.connected_clients[client_address][3]].current_player, self.games[self.connected_clients[client_address][3]].joueurs[self.connected_clients[client_address][0]]] 
+                                reponse = ["Yes", self.games[self.connected_clients[client_address][3]].current_player, self.games[self.connected_clients[client_address][3]].players[self.connected_clients[client_address][0]]] 
                                 reponse_json = json.dumps(reponse)
                                 self.server_socket.sendto(reponse_json.encode(), client_address)
                                 
@@ -199,7 +202,7 @@ class UDPServer:
                         
                         case "play_here":
                             # Appel de la méthode jouer() de la partie dans laquelle le client est 
-                            self.games[self.connected_clients[client_address][3]].jouer(message[1], message[2], self.connected_clients[client_address][0]) # row, col, addr_joueur,)
+                            self.games[self.connected_clients[client_address][3]].play(message[1], message[2], self.connected_clients[client_address][0]) # row, col, addr_joueur,)
 
                         case "update_game":
                             if self.connected_clients[client_address][3] not in self.games : # Si la partie de laquelle le client demande une mise à jour n'existe plus
@@ -210,7 +213,7 @@ class UDPServer:
                                 
                             else : # Si la partie de laquelle le client demande une mise à jour existe toujours
                                 # Si le timestamp de la dernière action dans la partie dans laquelle le client est, est supérieur au timestamp de la dernière mise à jour du client
-                                if self.games[self.connected_clients[client_address][3]].temps_derniere_action > message[1] : 
+                                if self.games[self.connected_clients[client_address][3]].time_last_action > message[1] : 
                                     current_player = self.games[self.connected_clients[client_address][3]].current_player # Récupère le pseudo du joueur qui doit jouer
                                     actions = self.games[self.connected_clients[client_address][3]].get_actions_after_time(message[1]) # Récupère toutes les actions depuis la dernière mise à jour avec la méthode get_actions_after_time()
                                     if actions[len(actions)-1][3] is True : # Si la partie est finie
@@ -241,7 +244,7 @@ class UDPServer:
                                     self.server_socket.sendto(reponse_json.encode(), client_address)
 
                         case "get_board":
-                            board = self.games[self.connected_clients[client_address][3]].get_board() # Récupère le plateau de jeu de la partie sur le serveur dans laquelle est le client
+                            board = self.games[self.connected_clients[client_address][3]].board # Récupère le plateau de jeu de la partie sur le serveur dans laquelle est le client
                             reponse = ["full_board", board]
                             reponse_json = json.dumps(reponse)
                             self.server_socket.sendto(reponse_json.encode(), client_address)
@@ -321,7 +324,7 @@ class UDPServer:
                     del self.connected_clients[address] # Supprime le client du dictionnaire des clients connectés
 
                     print(f"Client {address} supprimé pour inactivité.")
-                time.sleep(1)
+                time.sleep(1) # Attend 1 seconde avant de répéter les actions
 
             except Exception as e:
                 print(f"Erreur lors de la suppression des clients inactifs : {e}")
@@ -342,7 +345,8 @@ class UDPServer:
                         self.queue.remove(client_address)
                         print(f"Joueur {self.connected_clients[client_address][0]} a été retiré de la file d'attente")
 
-            print(f"Nombre de joueurs dans la file d'attente {len(self.queue)}")
+            # print(f"Nombre de joueurs dans la file d'attente {len(self.queue)}")
+            print(f"Clients connectés {self.connected_clients}")
             self.find_matching_players() # Appel la méthode find_matching_players() afin de créer des parties 
             time.sleep(1)
     
@@ -355,6 +359,7 @@ class UDPServer:
                 mmr_p1 = self.connected_clients[client_address][1] # Récupère le MMR du premier client
                 mmr_p2 = self.connected_clients[other_client_address][1] # Récupère le MMR du deuxième client
                 diff_mmr = abs(mmr_p1 - mmr_p2) # Calcule la différence de MMR entre les deux clients
+
                 # Si la différence de MMR est inférieure à 51 et que ceux sont deux clients différents
                 if client_address != other_client_address and self.connected_clients[client_address][0] != self.connected_clients[other_client_address][0] and diff_mmr < 51:
                     generated_id_partie = self.generate_id_unique() # Stocke un id de partie généré avec la méthode generate_id_unique()
