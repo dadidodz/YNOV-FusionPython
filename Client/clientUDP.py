@@ -440,7 +440,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         except Exception as e:
             print(f"Erreur lors de la tentative de quitter la partie : {e}")
     
-    def disconnection(self): # permet de se déconnecter DU SERVEUR QUAND ON CLIQUE SUR LE BOUTON DECONNEXION
+    def disconnection(self):
         """
         Envoie un message afin de se déconnecter du serveur lorsque le joueur clique sur le bouton "Déconnexion".
         """
@@ -571,7 +571,6 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         self.page_3 = Frame(self.root)
         self.page_1.pack()
 
-
         # -------------- PAGE 1 --------------------
         # Création variable
         self.pseudo = StringVar()
@@ -611,14 +610,13 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         btn_quit_app = Button(self.page_1, text="Quitter", command=lambda: self.root.destroy())
 
         #----------Pack widgets
-        Label(self.page_1, text="Page 1").pack()
+        Label(self.page_1, text="Page de connexion").pack()
         Label(self.page_1, text="Votre pseudo").pack()
         self.entry_pseudo.pack()
         Label(self.page_1, text="Votre mot de passe").pack()
         self.entry_password.pack()
         btn_connection.pack()
         btn_quit_app.pack()
-
 
         #-----------PAGE 2--------------
         #----------Création et config widgets
@@ -627,7 +625,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         self.btn_disconnection = Button(self.page_2, text="Déconnexion", command=lambda:[self.disconnection()])
         
         #----------Pack widget
-        Label(self.page_2, text="Page 2").pack()
+        Label(self.page_2, text="Salon").pack()
         self.label_pseudo = Label(self.page_2, text="")
         self.label_pseudo.pack()
         self.btn_find_game.pack()
@@ -645,22 +643,18 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         self.entry_msg.grid(row=5, column=1, columnspan=2, sticky="ew")
         
         self.btn_send_message_chat = Button(self.page_3, text="Envoyer", command=lambda:[self.send_message_chat()])
-        self.btn_quit_game = Button(self.page_3, text="Quitter la partie", command=self.quit_game) #self.return_page_2()
-        # self.btn_rejouer = Button(self.page_3, text="Rejouer", state="disabled", command=lambda:[])
+        self.btn_quit_game = Button(self.page_3, text="Quitter la partie", command=self.quit_game)
 
         #----------Grid widget
         self.label_current_player = Label(self.page_3, text="")
         self.label_current_player.grid(row=0, column=1, columnspan = 3, sticky = "ew")
         self.chat_display.grid(row=4, column=0, columnspan=3, sticky="ew")
-        # Label(self.page_3, text="Connecté").grid(row=5, column=0, columnspan=3, sticky="ew")
         Label(self.page_3, text="Entrez votre message ci-dessous :").grid(row=5, column=0, columnspan=3, sticky="ew")
         self.entry_msg.grid(row=6, column=0, columnspan=2, sticky="ew")
         self.btn_send_message_chat.grid(row=6, column=2, sticky="ew")
         self.btn_quit_game.grid(row=7, column=0, sticky="w")
-
         self.player_symbol = Label(self.page_3, text="")
         self.player_symbol.grid(row=8, column=0, columnspan = 3, sticky = "ew")
-        
         self.buttons = [[None for _ in range(3)] for _ in range(3)]
 
         for i in range(3):
@@ -669,10 +663,8 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
                 button.grid(row=i+1, column=j, ipady=10, ipadx=10)
                 self.buttons[i][j] = button
 
-
         self.root.mainloop()
 
-# Utilisation du serveur
 if __name__ == "__main__":
     udp_client = UDPClient()
     udp_client.run()
