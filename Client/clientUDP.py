@@ -57,7 +57,9 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         self.last_update_chat = None
         self.last_update_game  = None 
         self.pseudo_client = ""
-        self.current_player = "" 
+        self.current_player = ""
+
+        self.read_server_info_from_file()
         
     def read_server_info_from_file(self, filename='../config.txt'):
         """
@@ -75,7 +77,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
                         self.server_ip = line.split(":")[-1].strip()
                     elif "Port du serveur" in line:
                         self.server_port = int(line.split(":")[-1].strip())
-                        
+
         except Exception as e:
             print(f"Erreur lors de la lecture du fichier de configuration : {e}")
     
@@ -166,7 +168,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         Ajoute le joueur dans la file d'attente sur le serveur.
         """
         try:
-            message = ["recherche partie"]
+            message = ["search_game"]
             message_json = json.dumps(message) 
 
             self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
@@ -186,7 +188,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         Quitte la file d'attente lorsque le joueur clique sur le bouton "Quitter file d'attente".
         """
         try:
-            message = ["quitter file attente"] 
+            message = ["quit_queue"] 
             message_json = json.dumps(message)
             print(f"Tentative de retrait de la file d'attente") # afficher dans le terminal
             self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port)) # envoie le message au serveur
@@ -207,7 +209,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         """
         try:
             print("Partie trouvée ?")
-            message = ["partie trouvee"]
+            message = ["game_found"]
             message_json = json.dumps(message)
 
             self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
@@ -215,7 +217,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
             response, _ = self.client_socket.recvfrom(1024)
             if response:
                 response_decoded = json.loads(response.decode())
-                if response_decoded[0] == "Oui": # Si l'intitulé de la réponse est "Oui"
+                if response_decoded[0] == "Yes": # Si l'intitulé de la réponse est "Oui"
                     print("Réponse serveur : Oui") 
                     self.keep_game_search_active = False # Désactive la recherche de partie
                     
@@ -256,7 +258,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         """
         try:
             print(f"Je peux jouer ici {row}, {col}")
-            message = ["jouer ici", row, col] 
+            message = ["play_here", row, col] 
             message_json = json.dumps(message)
 
             self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
@@ -269,7 +271,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         Envoie un message au serveur pour savoir si de nouveaux coups ont été joués depuis la dernière mise à jour.
         """
         try:
-            message = ["maj partie", self.last_update_game ]  # Intitulé du message et le timestamp de la dernière mise à jour
+            message = ["update_game", self.last_update_game ]  # Intitulé du message et le timestamp de la dernière mise à jour
             message_json = json.dumps(message)
             
             self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
@@ -278,10 +280,10 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
             if response: # si le serveur répond au client
                 response_decoded = json.loads(response.decode())
 
-                if response_decoded[0] == "partie_lost": # Si la partie est perdue, c'est-à-dire, si un des deux joueurs l'a quittée
+                if response_decoded[0] == "game_lost": # Si la partie est perdue, c'est-à-dire, si un des deux joueurs l'a quittée
                     self.force_quit_game() # Force à quitter la partie
 
-                elif response_decoded[0] == "nouvelle action":
+                elif response_decoded[0] == "new_action":
                     for actions in response_decoded[1]: # Récupère les actions de la partie
                         row, col, txt, game_state, winner, loser, current_player = actions # Stocke les informations de la partie stockés dans actions (tuple)
                         self.current_player = response_decoded[2] # Récupère le joueur a qui est le tour
@@ -299,7 +301,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
                             
                         self.last_update_game  = time.time() # Stocke le timestamp de la dernière mise à jour
                 
-                elif response_decoded[0] == "zero nouvelle action": 
+                elif response_decoded[0] == "no_new_actions": 
                     pass 
 
         except Exception as e:
@@ -316,7 +318,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         Cette méthode permet de mettre à jour toutes les cases du plateau de jeu au cas où des coups se soient perdus.
         """
         try:
-            message = ["board"] 
+            message = ["get_board"] 
             message_json = json.dumps(message)
 
             self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
@@ -343,7 +345,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         Envoie un message au serveur pour savoir si de nouveaux messages ont été envoyé depuis la dernière mise à jour du chat.
         """
         try:
-            message = ["upd_chat", self.last_update_chat]
+            message = ["update_chat", self.last_update_chat]
             message_json = json.dumps(message)
             
             self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
@@ -382,7 +384,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         """
         if not self.check_message_chat(): # Si le message ne contient pas de caractères interdits
             try:
-                message = ["chat", self.message_chat.get()] 
+                message = ["new_chat_message", self.message_chat.get()] 
                 message_json = json.dumps(message)
 
                 self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port)) # envoie le message au serveur
@@ -429,7 +431,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         Envoie un message afin de quitter la partie lorsque le joueur clique sur le bouton "Quitter la partie".
         """
         try :
-            message = ["quitter partie"]
+            message = ["quit_game"]
             message_json = json.dumps(message)
 
             self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
@@ -446,7 +448,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         Envoie un message afin de se déconnecter du serveur lorsque le joueur clique sur le bouton "Déconnexion".
         """
         try :
-            message = ["deconnexion", self.pseudo.get()]
+            message = ["disconnect", self.pseudo.get()]
             message_json = json.dumps(message)
 
             self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
@@ -561,7 +563,6 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         """
         Lance l'application graphique.
         """
-        self.read_server_info_from_file()
         self.root = Tk()
         self.root.geometry("400x200")
         self.root.title("TIC TAC TOE")
@@ -667,6 +668,6 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         self.root.mainloop()
 
 if __name__ == "__main__":
-    udp_client = UDPClient()
-    udp_client.run()
+    udp_client = UDPClient() # Crée un objet UDPClient
+    udp_client.run() # Démarre le client
 

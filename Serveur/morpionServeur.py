@@ -3,7 +3,7 @@ from chat import Chat
 import sqlite3
 
 class MorpionServeur:
-    # def __init__(self, id_partie, addr_joueur1, addr_joueur2, pseudo_j1, pseudo_j2):
+
     def __init__(self, id_partie, pseudo_j1, pseudo_j2):
         self.id_partie = id_partie
         self.temps_derniere_action = time.time()
@@ -88,7 +88,7 @@ class MorpionServeur:
                         
     def get_actions_after_time(self, timestamp): # le serveur demande au morpion si après chaque seconde il y'a un nouveau coup
         # Récupérer les messages envoyés après le temps donné
-        action_after_time = [(row, col, txt, etat_partie, gagnant, perdant, current_player ) for row, col, txt, etat_partie, gagnant, perdant,current_player, action_time in self.historique_actions if action_time > timestamp]
+        action_after_time = [(row, col, txt, etat_partie, gagnant, perdant, current_player ) for row, col, txt, etat_partie, gagnant, perdant, current_player, action_time in self.historique_actions if action_time > timestamp]
         return action_after_time
     
     def get_board(self):
