@@ -61,7 +61,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
 
         self.read_server_info_from_file()
         
-    def read_server_info_from_file(self, filename='../config.txt'):
+    def read_server_info_from_file(self, filename='../../config.txt'):
         """
         Lis le fichier config.txt afin d'en extraire l'IP et le Port du serveur et attribut les données à server_ip et server_port
 

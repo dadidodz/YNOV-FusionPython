@@ -39,7 +39,7 @@ class UDPServer:
         self.is_running = True  # Condition d'arrêt
         print(f"Serveur UDP en écoute sur {self.server_ip}:{self.server_port}")
     
-    def read_server_info_from_file(self, filename='../config.txt'):
+    def read_server_info_from_file(self, filename='../../config.txt'):
         """
         Lis le fichier config.txt afin d'en extraire l'IP et le Port du serveur et attribut les données à server_ip et server_port
 
