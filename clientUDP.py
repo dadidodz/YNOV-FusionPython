@@ -36,6 +36,7 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
         self.last_update_partie = None # permet de savoir la dernière action de la partie
 
         self.pseudo_client = ""
+        self.password = ""
         self.currentPlayer = "" # permet de savoir qui doit jouer
         
     
@@ -52,9 +53,9 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
             print(f"Erreur lors de la lecture du fichier de configuration : {e}")
     
     def connection(self): # permet de se connecter au serveur 
-        if not self.check_pseudo():
+        if not self.check_pseudo() and not self.check_password():
             try: 
-                message = ["connection", self.pseudo.get()] # stock les informations sous forme de message : connexion + pseudo
+                message = ["connection", self.pseudo.get(), self.password.get()] # stock les informations sous forme de message : connexion + pseudo
                 message_json = json.dumps(message) # transformer en json pour l'envoyer au serveur
 
                 self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port)) # envoie le message au serveur
@@ -63,9 +64,16 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
 
                 print("Dans connection, réponse serveur :", response.decode()) # afficher la réponse du serveur
                 if response_decoded[0] == "already_connected":
-                    self.entry_pseudo.delete(0, 'end') # supprimer le pseudo dans l'entrée utilisateur
+                    # self.entry_pseudo.delete(0, 'end') # supprimer le pseudo dans l'entrée utilisateur
+                    self.entry_password.delete(0, 'end')
                     messagebox.showwarning("Erreur", "Vous êtes déjà connecté depuis un autre poste.")
-                else: # si la réponse est vrai afficher la page 2
+                
+                if response_decoded[0] == "rejected":
+                    # self.entry_pseudo.delete(0, 'end') # supprimer le pseudo dans l'entrée utilisateur
+                    self.entry_password.delete(0, 'end')
+                    messagebox.showwarning("Erreur", "Pseudo ou mot de passe incorrect.")
+
+                if response_decoded[0] == "connected": # si la réponse est vrai afficher la page 2
                     self.keep_alive_active =  True # permet continuer l'appel a stayconnected
                     self.show_page_2() 
                     self.stay_connected() # permet de rester connecté
@@ -73,12 +81,18 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
             except Exception as e: # gere exeception si le client n'arrive pas à se connecter
                 print(f"Erreur lors de la connexion au serveur : {e}")
         else: # si le pseudo n'est pas valide afficher un message d'erreur
-            self.entry_pseudo.delete(0, 'end') # supprimer le pseudo dans l'entrée utilisateur
-            messagebox.showwarning("Erreur", "Le pseudo renseigné contient des caractères spéciaux ou n'est pas assez long.")
+            # self.entry_pseudo.delete(0, 'end') # supprimer le pseudo dans l'entrée utilisateur
+            messagebox.showwarning("Erreur", "Pseudo ou mot de passe trop court, ou bien le pseudo renseigné contient des caractères spéciaux interdits.")
     
     def check_pseudo(self): # permet de checker si pseudo valide
         forbidden_characters = r"[^\w\s]"
         if len(self.pseudo.get()) < 3 or re.search(forbidden_characters, self.pseudo.get()):
+            return True
+        else:
+            return False
+    
+    def check_password(self):
+        if len(self.password.get()) <= 4:
             return True
         else:
             return False
@@ -238,11 +252,7 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
                         button_text = self.buttons[i][j].cget('text')
                         board_value = board_game[i][j]
                         if button_text != board_value:
-                            print(board_value)
                             self.buttons[i][j].config(text=board_value)
-                            print(f"Difference at position ({i},{j}): Button has '{button_text}' but board has '{board_value}'")
-                        else:
-                            print(f"Match at position ({i},{j}): Both have '{button_text}'")
 
         except Exception as e:
             print(f"Erreur lors de la mise à jour complète du board: {e}")
@@ -297,11 +307,11 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
                 print(f"Erreur lors de la connexion au serveur : {e}")
         else:
             self.entry_msg.delete(0, 'end')
-            messagebox.showwarning("Erreur", "Votre message contient des caractères interdits ou est trop court.")
+            messagebox.showwarning("Erreur", "Votre message contient des caractères interdits ou est vide.")
     
     def check_message_chat(self): # permet de checker si le message contient des caractères interdits
         forbidden_characters = r"[:\\;{}]"
-        if re.search(forbidden_characters, self.message_chat.get()) or len(self.message_chat.get()) <= 1:
+        if re.search(forbidden_characters, self.message_chat.get()) or len(self.message_chat.get()) <= 0:
             return True # si le message contient des caractères interdits
         else:
             return False # si le message ne contient pas des caractères interdits
@@ -326,16 +336,7 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
             self.client_socket.sendto(message_json.encode(), (self.server_ip, self.server_port))
             response, _ = self.client_socket.recvfrom(1024)
             if response :
-                self.keep_update_game_active = False # permet d'annuler la mise à jour de la partie 
-                self.root.after_cancel(self.keep_update_game_id) # permet d'annuler la mise à jour de la partie
-
-                self.keep_get_full_board_active = False
-                self.root.after_cancel(self.keep_get_full_board_id)
-
-                self.keep_update_chat_active = False 
-                self.root.after_cancel(self.keep_update_chat_id) # permet d'annuler la mise à jour du chat
-                print("Client quitte la partie", response.decode()) # afficher dans le terminal
-                self.return_page_2()
+                self.force_quit_game()
                 
         except Exception as e:
             print(f"Erreur lors de la tentative de quitter la partie : {e}")
@@ -364,7 +365,7 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
 
     ######## Méthodes avec actions sur la fenetre tkinter
     def on_validate(self, P): # permet de valider le message du chat
-        return len(P) <= 25 # permet de limiter le message à 25 caractères
+        return len(P) <= 50 # permet de limiter le message à 50 caractères
 
     def return_page_1(self):
         self.enable_btn_find_game()
@@ -373,6 +374,7 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
         self.root.geometry("400x200")
 
     def show_page_2(self):
+        self.entry_password.delete(0, 'end')
         self.page_1.pack_forget() # permet de cacher la page 1
         self.page_2.pack()
         self.root.geometry("400x300")
@@ -417,8 +419,6 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
         self.btn_cancel_find_game.config(state="disabled")
         self.btn_find_game.config(state="enable")
 
-
-
     def update_current_player(self):
         self.label_current_player.config(text=f"C'est à : {self.currentPlayer} de jouer ")
         
@@ -438,6 +438,7 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
         # -------------- PAGE 1 --------------------
         # Création variable
         self.pseudo = StringVar()
+        self.password = StringVar()
 
         #--------------------Création des Styles--------------------#
         #----------Boutons----------#
@@ -468,6 +469,7 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
         
         #----------Création et config widgets
         self.entry_pseudo = Entry(self.page_1, textvariable=self.pseudo)
+        self.entry_password = Entry(self.page_1, show="*", textvariable=self.password)
 
         btn_connection = Button(self.page_1, text="Se connecter", command=lambda:[self.change_pseudo_client(), self.connection()])
         # btn_connexion.config(width=20, height=2)
@@ -477,8 +479,10 @@ class UDPClient: # initialiser toutes les attributs de l'object udp client
 
         #----------Pack widget
         Label(self.page_1, text="Page 1").pack()
-        Label(self.page_1, text="Pseudo").pack()
+        Label(self.page_1, text="Votre pseudo").pack()
         self.entry_pseudo.pack()
+        Label(self.page_1, text="Votre mot de passe").pack()
+        self.entry_password.pack()
         btn_connection.pack()
         btn_quit_app.pack()
 

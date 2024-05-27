@@ -4,6 +4,7 @@ import sqlite3
 import time
 import json
 import random
+import bcrypt
 from chat import Chat
 from morpionServeur import MorpionServeur
 
@@ -20,7 +21,6 @@ class UDPServer:
         self.read_server_info_from_file()
         
         self.clients = {} # Exemple format : ('192.168.1.100', 12345): [dorian, 1000, 0, None, 1647831000.0]
-        self.players = {} # ex: ('192.168.10.1', 12345) : [dorian, 1000, 168552223.0] pseudo, mmr, en_recherche, id_partie, timestamp
         self.connected_clients = {}
         self.queue = []
         self.parties = {} # Exemple format : 1: Partie
@@ -54,29 +54,53 @@ class UDPServer:
                     message = json.loads(message_json.decode())
                     match message[0]:
                         case "connection":
-                            pseudo_client = message[1]
-                            already_connected = any(pseudo_client in valeurs for valeurs in self.connected_clients.values())
+                            # pseudo_client = message[1]
+
+                            already_connected = any(message[1] in valeurs for valeurs in self.clients.values())
                             if already_connected:
                                 reponse = ["already_connected"]
                                 reponse_json = json.dumps(reponse)
                                 self.server_socket.sendto(reponse_json.encode(), client_address)
                             else:
+                                password_bytes = message[2].encode('utf-8')
+                                password_hashed = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
+
                                 sql = '''
                                 SELECT 1
                                 FROM Joueur
                                 WHERE pseudo = ?
                                 LIMIT 1
                                 '''
-                                cursor.execute(sql, (pseudo_client,))
+                                cursor.execute(sql, (message[1],))
                                 result = cursor.fetchone()
                                 if result:
                                     print(f"Le joueur {message[1]} existe dans la base de données.")
-                                    sql = '''
-                                    UPDATE Joueur
-                                    SET IP = ?, Port = ?
-                                    WHERE Pseudo = ?
-                                    '''
-                                    data = (client_address[0], client_address[1], message[1])
+                                    cursor.execute("SELECT Mot_de_passe FROM Joueur WHERE Pseudo = ?", (message[1],))
+                                    result_2 = cursor.fetchone()
+                                    if result_2 and bcrypt.checkpw(password_bytes, result_2[0]):
+                                        # response = "ACCEPTED"
+                                        sql = '''
+                                        UPDATE Joueur
+                                        SET IP = ?, Port = ?
+                                        WHERE Pseudo = ?
+                                        '''
+                                        data = (client_address[0], client_address[1], message[1])
+
+                                        cursor.execute(sql, data)
+                                        connection.commit()
+                                            
+                                        infos = [message[1], 1000, 0, None, time.time()]
+                                        self.clients[client_address] = infos
+
+                                        reponse = ["connected"]
+                                        reponse_json = json.dumps(reponse)
+                                        self.server_socket.sendto(reponse_json.encode(), client_address)
+                                    else:
+                                        reponse = ["rejected"]
+                                        reponse_json = json.dumps(reponse)
+                                        self.server_socket.sendto(reponse_json.encode(), client_address)
+                                    
+                                    
 
                                 else:
                                     print(f"Le joueur {message[1]} est un nouvel utilisateur")
@@ -84,25 +108,23 @@ class UDPServer:
                                     INSERT INTO Joueur (Pseudo, Mot_de_passe, IP, Port, MMR)
                                     VALUES (?, ?, ?, ?, ?)
                                     '''
-                                    data = (message[1], None, client_address[0], client_address[1], 1000)
-
-                                cursor.execute(sql, data)
-                                connection.commit()
                                     
-                                
-                                infos = [message[1], 1000, 0, None, time.time()]
-                                self.clients[client_address] = infos
-                                # client_infos = [message[1], time.time()] 
-                                # self.connected_clients[client_address] = client_infos # ex: ('192.168.10.1', 12345) : [dorian, 168552223.0]
+                                    # if bcrypt.checkpw(password_bytes, password_hashed):
+                                    #     print("Le mot de passe correspond")
+                                    # else:
+                                    #     print("Le mot de passe ne correspond pas")
 
-                                reponse = ["connected"]
-                                reponse_json = json.dumps(reponse)
-                                self.server_socket.sendto(reponse_json.encode(), client_address)
+                                    data = (message[1], password_hashed, client_address[0], client_address[1], 1000)
+                                    cursor.execute(sql, data)
+                                    connection.commit()
+                                    infos = [message[1], 1000, 0, None, time.time()]
+                                    self.clients[client_address] = infos
 
-                                # self.server_socket.sendto(f"{self.clients[client_address][0]}".encode('utf-8'), client_address)
-
+                                    reponse = ["connected"]
+                                    reponse_json = json.dumps(reponse)
+                                    self.server_socket.sendto(reponse_json.encode(), client_address)
+                                    
                         case "alive":
-                            # self.connected_clients[client_address][1] = time.time()
                             self.clients[client_address][4] = time.time()
                             self.server_socket.sendto("Vous êtes toujours connecté".encode('utf-8'), client_address)
                             print(f"Message reçu de {client_address}: {message_json.decode()}")
@@ -115,8 +137,6 @@ class UDPServer:
                             '''
 
                             cursor.execute(sql, (self.clients[client_address][0],))
-                            # mmr_client_tuple = cursor.fetchone()
-                            # mmr_client = mmr_client_tuple[0]
                             mmr_client = cursor.fetchone()[0]
                             self.clients[client_address][1] = mmr_client
                             print(f"MMR de {self.clients[client_address][0]} est : mmr_client = {mmr_client}, clients[clients_address] = {self.clients[client_address][1]}")
@@ -150,7 +170,6 @@ class UDPServer:
                         
                         case "maj partie":
                             if self.clients[client_address][3] not in self.parties:
-                                # est ce que c'est le tour du joueur x
                                 reponse = ["partie_lost"]
                                 reponse_json = json.dumps(reponse)
                                 self.server_socket.sendto(reponse_json.encode(), client_address)
@@ -162,17 +181,11 @@ class UDPServer:
                                     actions = self.parties[self.clients[client_address][3]].get_actions_after_time(message[1])
                                     print(actions)
                                     if actions[len(actions)-1][3] is True:
-                                        # print(f"Le joueur {actions[len(actions)-1][4]} gagne la partie, il gagne du mmr")
                                         new_mmr = 0
                                         if self.clients[client_address][0] == actions[len(actions)-1][4]:
                                             new_mmr = self.clients[client_address][1] + 5
-                                            
-                                            # self.clients[client_address][1] = self.clients[client_address][1] + 5
-                                            
                                         if self.clients[client_address][0] == actions[len(actions)-1][5]:
                                             new_mmr = self.clients[client_address][1] - 5
-                                            # print(new_mmr)
-                                            # self.clients[client_address][1] = self.clients[client_address][1] - 5
                                         
                                         print(new_mmr)
                                         sql = '''
@@ -206,7 +219,6 @@ class UDPServer:
                             if self.clients[client_address][3] in self.parties:
                                 if self.parties[self.clients[client_address][3]].chat.last_updated > message[1]: #self.chat.last_updated > message[1]
                                     messages = self.parties[self.clients[client_address][3]].chat.get_messages_after_time(message[1])
-                                    # messages = self.chat.get_messages_after_time(message[1])
                                     reponse = ["new_msg", messages]
                                     reponse_json = json.dumps(reponse)
                                     self.server_socket.sendto(reponse_json.encode(), client_address)
@@ -279,7 +291,6 @@ class UDPServer:
                 ## Inutile si on retire correctement les joueurs quand ils ne recherchent plus une partie
                 ## ou bien s'ils sont déjà dans une partie
                 else:
-                    # print("Retrait de la file d'attente")
                     if client_address in self.queue:
                         self.queue.remove(client_address)
                         print(f"Joueur {self.clients[client_address][0]} a été retiré de la file d'attente")
@@ -300,11 +311,10 @@ class UDPServer:
                 if client_address != other_client_address and self.clients[client_address][0] != self.clients[other_client_address][0] and diff_mmr < 51: #self.clients[client_address][1] == self.clients[other_client_address][1]
                     # Ajouter les adresses des joueurs ayant le même MMR à la liste temporaire
                     id_partie = random.randint(999, 10000)
-                    # partie = MorpionServeur(id_partie, client_address, other_client_address, self.clients[client_address][0], self.clients[other_client_address][0])
                     partie = MorpionServeur(id_partie, self.clients[client_address][0], self.clients[other_client_address][0])
                     self.parties[partie.id_partie] = partie
-                    self.clients[client_address][3] = id_partie #self.clients[client_address][3] = partie.id_partie
-                    self.clients[other_client_address][3] = id_partie #self.clients[other_client_address][3] = partie.id_partie
+                    self.clients[client_address][3] = id_partie
+                    self.clients[other_client_address][3] = id_partie
                     # Retire les deux joueurs qui viennent de trouver une partie de la liste d'attente
                     self.queue.remove(client_address)
                     self.queue.remove(other_client_address)
