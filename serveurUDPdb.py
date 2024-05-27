@@ -5,6 +5,7 @@ import time
 import json
 import random
 import bcrypt
+import string
 from chat import Chat
 from morpionServeur import MorpionServeur
 
@@ -108,12 +109,7 @@ class UDPServer:
                                     INSERT INTO Joueur (Pseudo, Mot_de_passe, IP, Port, MMR)
                                     VALUES (?, ?, ?, ?, ?)
                                     '''
-                                    
-                                    # if bcrypt.checkpw(password_bytes, password_hashed):
-                                    #     print("Le mot de passe correspond")
-                                    # else:
-                                    #     print("Le mot de passe ne correspond pas")
-
+    
                                     data = (message[1], password_hashed, client_address[0], client_address[1], 1000)
                                     cursor.execute(sql, data)
                                     connection.commit()
@@ -123,7 +119,10 @@ class UDPServer:
                                     reponse = ["connected"]
                                     reponse_json = json.dumps(reponse)
                                     self.server_socket.sendto(reponse_json.encode(), client_address)
-                                    
+                                
+                                password_bytes = None
+                                password_hashed = None
+
                         case "alive":
                             self.clients[client_address][4] = time.time()
                             self.server_socket.sendto("Vous êtes toujours connecté".encode('utf-8'), client_address)
@@ -214,6 +213,14 @@ class UDPServer:
                         case "chat":
                             print(f"Dans chat {client_address} Pseudo : {self.clients[client_address][0]}")
                             self.parties[self.clients[client_address][3]].chat.add_message(self.clients[client_address][0], message[1])
+                            sql = '''
+                            INSERT INTO HistoriqueMessages (Pseudo, Id_Partie, Contenu)
+                            VALUES (?, ?, ?)
+                            '''
+                            data = (self.clients[client_address][0], self.clients[client_address][3], message[1])
+
+                            cursor.execute(sql, data)
+                            connection.commit()
 
                         case "upd_chat":
                             if self.clients[client_address][3] in self.parties:
@@ -310,11 +317,13 @@ class UDPServer:
                 diff_mmr = abs(mmr_p1 - mmr_p2)
                 if client_address != other_client_address and self.clients[client_address][0] != self.clients[other_client_address][0] and diff_mmr < 51: #self.clients[client_address][1] == self.clients[other_client_address][1]
                     # Ajouter les adresses des joueurs ayant le même MMR à la liste temporaire
+                    
+                    generated_id_partie = generated_id_partie()
                     id_partie = random.randint(999, 10000)
-                    partie = MorpionServeur(id_partie, self.clients[client_address][0], self.clients[other_client_address][0])
-                    self.parties[partie.id_partie] = partie
-                    self.clients[client_address][3] = id_partie
-                    self.clients[other_client_address][3] = id_partie
+                    partie = MorpionServeur(generated_id_partie, self.clients[client_address][0], self.clients[other_client_address][0])
+                    self.parties[partie.generated_id_partie] = partie
+                    self.clients[client_address][3] = generated_id_partie
+                    self.clients[other_client_address][3] = generated_id_partie
                     # Retire les deux joueurs qui viennent de trouver une partie de la liste d'attente
                     self.queue.remove(client_address)
                     self.queue.remove(other_client_address)
@@ -339,6 +348,23 @@ class UDPServer:
         
         except KeyboardInterrupt:
             self.stop_server()
+    
+    def generer_id_unique(self):
+        connection = sqlite3.connect("fusion.sqlite")
+        cursor = connection.cursor()
+        while True:
+            # Générer un identifiant aléatoire
+            id_partie = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+
+            # Vérifier si l'identifiant existe déjà dans la base de données
+            cursor.execute("SELECT Id_Partie FROM HistoriquePartie WHERE Id_Partie = ?", (id_partie,))
+            result = cursor.fetchone()
+
+            # Si l'identifiant n'existe pas, retourner l'identifiant généré
+            if not result:
+                connection.close()
+                return id_partie
+
     
     def stop_server(self):
         self.is_running = False
