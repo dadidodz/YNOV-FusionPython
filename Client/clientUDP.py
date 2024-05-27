@@ -565,7 +565,7 @@ class UDPClient: # Objet UDPClient avec les fonctionnalités et l'interface grap
         """
         self.root = Tk()
         self.root.geometry("400x200")
-        self.root.title("TIC TAC TOE")
+        self.root.title("TIC TAC TOE FUSION")
 
         # Création des pages
         self.page_1 = Frame(self.root)
