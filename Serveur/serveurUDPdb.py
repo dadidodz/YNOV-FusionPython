@@ -103,8 +103,6 @@ class UDPServer:
                                         reponse_json = json.dumps(reponse)
                                         self.server_socket.sendto(reponse_json.encode(), client_address)
                                     
-                                    
-
                                 else:
                                     print(f"Le joueur {message[1]} est un nouvel utilisateur")
                                     sql = '''
@@ -157,7 +155,6 @@ class UDPServer:
 
                         case "partie trouvee":
                             if self.clients[client_address][3] != None : # est ce que le client x a trouvé une partie 
-                                
                                 reponse = ["Oui", self.parties[self.clients[client_address][3]].current_player, self.parties[self.clients[client_address][3]].joueurs[self.clients[client_address][0]]] # recupéré la personne qui a trouvé la partie en lui attribuant la croix ou le rond
                                 reponse_json = json.dumps(reponse)
                                 self.server_socket.sendto(reponse_json.encode(), client_address)
