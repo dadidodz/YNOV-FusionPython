@@ -64,7 +64,7 @@ Note : *[en savoir plus sur les environnements virtuels python](https://openclas
 Modifier le fichier config.txt en mettant l'adresse du serveur IPv4 (choissisez un ordinateur qui sera serveur + client)
 
 
-**Attention ne changé pas les ports**
+**Attention ne changez pas les ports**
 ### Lancez 2 terminaux sur votre machine :
 
 | Terminal      | Commande                |
