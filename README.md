@@ -5,7 +5,7 @@ C'est un logiciel qui permet de jouer au morpion en ligne (localement).
 
 ## En exécutable
 
- - [Ouvrez simplement l'exécutable]((https://github.com/dadidodz/YNOV-FusionPython/releases/tag/Release))
+ - [Ouvrez simplement l'exécutable](https://github.com/dadidodz/YNOV-FusionPython/releases/tag/Release)
 
 
 
