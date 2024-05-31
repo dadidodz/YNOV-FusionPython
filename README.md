@@ -1,4 +1,4 @@
-x
+
 # Logiciel morpion en réseau 
 
 C'est un logiciel qui permet de jouer au morpion en ligne (localement).
